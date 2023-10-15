@@ -10,7 +10,7 @@ from linebot.exceptions import (
 from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage,
 )
-import requests
+import const
 
 app = Flask(__name__)
 
@@ -54,7 +54,14 @@ def generate_gpt4_response(prompt):
 
     response = requests.post(GPT4_API_URL, headers=headers, json=data)
     response_json = response.json()
-    return response_json['choices'][0]['message']['content'].strip()
+    # return response_json['choices'][0]['message']['content'].strip()
+    # Add this line to log the response from OpenAI API
+    app.logger.info("Response from OpenAI API: " + str(response_json))
+
+    try:
+        return response_json['choices'][0]['message']['content'].strip()
+    except KeyError:
+        return "Sorry, I couldn't understand that."
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
@@ -69,7 +76,85 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
 
+# from flask import Flask, request, abort
+# import os
+# import openai
+# from linebot import (
+#     LineBotApi, WebhookHandler
+# )
+# from linebot.exceptions import (
+#     InvalidSignatureError
+# )
+# from linebot.models import (
+#     MessageEvent, TextMessage, TextSendMessage,
+# )
+# import requests
 
+# app = Flask(__name__)
+
+# # 環境変数取得
+# YOUR_CHANNEL_ACCESS_TOKEN = os.environ["YOUR_CHANNEL_ACCESS_TOKEN"]
+# YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
+# OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+
+# line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
+# handler = WebhookHandler(YOUR_CHANNEL_SECRET)
+# openai.api_key = OPENAI_API_KEY
+# GPT4_API_URL = 'https://api.openai.com/v1/chat/completions'
+
+# @app.route("/")
+# def hello_world():
+#     return "hello world!"
+
+# @app.route("/callback", methods=['POST'])
+# def callback():
+#     signature = request.headers['X-Line-Signature']
+#     body = request.get_data(as_text=True)
+#     app.logger.info("Request body: " + body)
+#     try:
+#         handler.handle(body, signature)
+#     except InvalidSignatureError:
+#         abort(400)
+#     return 'OK'
+
+# def generate_gpt4_response(prompt):
+#     headers = {
+#         'Content-Type': 'application/json',
+#         'Authorization': f'Bearer {OPENAI_API_KEY}'
+#     }
+#     data = {
+#         'model': "gpt-4.0-turbo",
+#         'messages': [
+#             {"role": "system", "content": "You are a helpful assistant."},
+#             {"role": "user", "content": prompt}
+#         ]
+#     }
+
+#     response = requests.post(GPT4_API_URL, headers=headers, json=data)
+#     response_json = response.json()
+#     # return response_json['choices'][0]['message']['content'].strip()
+#     # Add this line to log the response from OpenAI API
+#     app.logger.info("Response from OpenAI API: " + str(response_json))
+
+#     try:
+#         return response_json['choices'][0]['message']['content'].strip()
+#     except KeyError:
+#         return "Sorry, I couldn't understand that."
+
+# @handler.add(MessageEvent, message=TextMessage)
+# def handle_message(event):
+#     text = event.message.text
+#     reply_text = generate_gpt4_response(text)
+#     line_bot_api.reply_message(
+#         event.reply_token,
+#         TextSendMessage(text=reply_text)
+#     )
+
+# if __name__ == "__main__":
+#     port = int(os.getenv("PORT", 5000))
+#     app.run(host="0.0.0.0", port=port)
+
+# 初期OK
 # from flask import Flask, request, abort
 # import os
 # import openai
