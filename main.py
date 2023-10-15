@@ -51,7 +51,7 @@ def handle_message(event):
       engine="gpt-4",
       prompt=event.message.text,
       max_tokens=50,
-      temperature=1,
+      temperature=1
     )
     generated_response = response.choices[0].text.strip()
 
