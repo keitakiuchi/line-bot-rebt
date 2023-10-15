@@ -69,6 +69,8 @@ def generate_gpt4_response(prompt):
         
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
+    print(f"Received webhook data: {request.data}")  # Webhookデータをログに出力
+def handle_message(event):
     if event.source.type == "user":
         userId = event.source.userId
         print(f"Received message from user ID: {userId}")
