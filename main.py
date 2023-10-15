@@ -46,12 +46,15 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
+    # LINEからのメッセージをログに出力
+    app.logger.info("Received message from LINE: " + event.message.text)
     # OpenAIのAPIを使って応答を生成
     response = openai.Completion.create(
       engine="gpt-4",
       prompt=event.message.text,
-      max_tokens=50,
-      temperature=1
+      max_tokens=150
+        #,
+      #temperature=1
     )
     generated_response = response.choices[0].text.strip()
 
