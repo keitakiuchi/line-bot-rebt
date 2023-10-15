@@ -1,6 +1,6 @@
 from flask import Flask, request, abort
 import os
-import requests
+import openai
 from linebot import (
     LineBotApi, WebhookHandler
 )
@@ -10,46 +10,54 @@ from linebot.exceptions import (
 from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage,
 )
+import requests
 
 app = Flask(__name__)
 
 # 環境変数取得
 YOUR_CHANNEL_ACCESS_TOKEN = os.environ["YOUR_CHANNEL_ACCESS_TOKEN"]
 YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
-GPT4_API_KEY = os.environ["OPENAI_API_KEY"] # この環境変数名は適切に変更してください
-GPT4_API_URL = "https://api.openai.com/v1/engines/davinci-codex/completions"
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
 line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(YOUR_CHANNEL_SECRET)
+openai.api_key = OPENAI_API_KEY
+GPT4_API_URL = 'https://api.openai.com/v1/chat/completions'
 
-def generate_gpt4_response(prompt):
-    headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {GPT4_API_KEY}'}
-    data = {
-        'prompt': prompt,
-        'max_tokens': 50,
-        'n': 1,
-        'stop': None,
-        'temperature': 0.5
-    }
+@app.route("/")
+def hello_world():
+    return "hello world!"
 
-    response = requests.post(GPT4_API_URL, headers=headers, json=data)
-    response_json = response.json()
-    return response_json['choices'][0]['text'].strip()
-
-@app.route('/callback', methods=['POST'])
+@app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers['X-Line-Signature']
     body = request.get_data(as_text=True)
-
+    app.logger.info("Request body: " + body)
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
-
     return 'OK'
 
+def generate_gpt4_response(prompt):
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {OPENAI_API_KEY}'
+    }
+    data = {
+        'model': "gpt-4.0-turbo",
+        'messages': [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt}
+        ]
+    }
+
+    response = requests.post(GPT4_API_URL, headers=headers, json=data)
+    response_json = response.json()
+    return response_json['choices'][0]['message']['content'].strip()
+
 @handler.add(MessageEvent, message=TextMessage)
-def handle_text_message(event):
+def handle_message(event):
     text = event.message.text
     reply_text = generate_gpt4_response(text)
     line_bot_api.reply_message(
@@ -58,7 +66,8 @@ def handle_text_message(event):
     )
 
 if __name__ == "__main__":
-    app.run()
+    port = int(os.getenv("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
 
 
 # from flask import Flask, request, abort
