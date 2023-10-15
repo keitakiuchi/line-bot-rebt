@@ -74,7 +74,7 @@ def handle_message(event):
 
     # ユーザーからのイベントの場合、ユーザーIDを出力
     if event.source.type == "user":
-        userId = event.source.userId
+        userId = event.source.userId  # この行を修正
         print(f"Received message from user ID: {userId}")
     else:
         print("Received event from non-user source.")
