@@ -59,10 +59,13 @@ def generate_gpt4_response(prompt):
     app.logger.info("Response from OpenAI API: " + str(response_json))
 
     try:
+        response = requests.post(GPT4_API_URL, headers=headers, json=data)
+        response.raise_for_status()  # Check if the request was successful
+        response_json = response.json()
         return response_json['choices'][0]['message']['content'].strip()
-    except KeyError:
+    except requests.RequestException as e:
+        app.logger.error(f"OpenAI API request failed: {e}")
         return "Sorry, I couldn't understand that."
-
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     text = event.message.text
