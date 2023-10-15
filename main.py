@@ -45,7 +45,7 @@ def generate_gpt4_response(prompt):
         'Authorization': f'Bearer {OPENAI_API_KEY}'
     }
     data = {
-        'model': "gpt-4.0-turbo",
+        'model': "gpt-4.0",
         'messages': [
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": prompt}
