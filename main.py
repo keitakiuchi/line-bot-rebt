@@ -66,7 +66,11 @@ def generate_gpt4_response(prompt):
     except requests.RequestException as e:
         app.logger.error(f"OpenAI API request failed: {e}")
         return "Sorry, I couldn't understand that."
+        
 @handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
+    userId = event.source.userId  # ユーザーIDを取得
+    print(f"Received message from user ID: {userId}")
 def handle_message(event):
     text = event.message.text
     reply_text = generate_gpt4_response(text)
@@ -79,6 +83,7 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
 
+## GPT-4 #############################
 # from flask import Flask, request, abort
 # import os
 # import openai
@@ -126,7 +131,7 @@ if __name__ == "__main__":
 #         'Authorization': f'Bearer {OPENAI_API_KEY}'
 #     }
 #     data = {
-#         'model': "gpt-4.0-turbo",
+#         'model': "gpt-4",
 #         'messages': [
 #             {"role": "system", "content": "You are a helpful assistant."},
 #             {"role": "user", "content": prompt}
@@ -140,10 +145,13 @@ if __name__ == "__main__":
 #     app.logger.info("Response from OpenAI API: " + str(response_json))
 
 #     try:
+#         response = requests.post(GPT4_API_URL, headers=headers, json=data)
+#         response.raise_for_status()  # Check if the request was successful
+#         response_json = response.json()
 #         return response_json['choices'][0]['message']['content'].strip()
-#     except KeyError:
+#     except requests.RequestException as e:
+#         app.logger.error(f"OpenAI API request failed: {e}")
 #         return "Sorry, I couldn't understand that."
-
 # @handler.add(MessageEvent, message=TextMessage)
 # def handle_message(event):
 #     text = event.message.text
@@ -157,7 +165,7 @@ if __name__ == "__main__":
 #     port = int(os.getenv("PORT", 5000))
 #     app.run(host="0.0.0.0", port=port)
 
-# 初期OK
+## davinci ###########################
 # from flask import Flask, request, abort
 # import os
 # import openai
@@ -208,18 +216,12 @@ if __name__ == "__main__":
 # def handle_message(event):
 #     # LINEからのメッセージをログに出力
 #     app.logger.info("Received message from LINE: " + event.message.text)
-#     # OpenAIのAPIを使って応答を生成
 #     response = openai.Completion.create(
-#       model="gpt-4",
-#       messages=[
-#             {"role": "user", "content": event.message.text}
-#         ],
-#       max_tokens=150
-#         #,
-#       #temperature=1
-#     )
-#     # generated_response = response.choices[0].text.strip()
-#     generated_response = response['choices'][0]['message']['content'].strip()
+#     engine="davinci",
+#     prompt=event.message.text,
+#     max_tokens=150
+#   )
+#   generated_response = response.choices[0].text.strip()
 
 #     # LINEに応答を送信
 #     line_bot_api.reply_message(
@@ -231,7 +233,7 @@ if __name__ == "__main__":
 #     port = int(os.getenv("PORT", 5000))
 #     app.run(host="0.0.0.0", port=port)
 
-## GPTなし
+## GPTなし ##########################
 # from flask import Flask, request, abort
 # import os
 # import openai
