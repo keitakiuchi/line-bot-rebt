@@ -50,13 +50,16 @@ def handle_message(event):
     app.logger.info("Received message from LINE: " + event.message.text)
     # OpenAIのAPIを使って応答を生成
     response = openai.Completion.create(
-      engine="gpt-4",
-      prompt=event.message.text,
+      model="gpt-4",
+      messages=[
+            {"role": "user", "content": event.message.text}
+        ],
       max_tokens=150
         #,
       #temperature=1
     )
-    generated_response = response.choices[0].text.strip()
+    # generated_response = response.choices[0].text.strip()
+    generated_response = response['choices'][0]['message']['content'].strip()
 
     # LINEに応答を送信
     line_bot_api.reply_message(
