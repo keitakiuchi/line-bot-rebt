@@ -69,14 +69,17 @@ def generate_gpt4_response(prompt):
         
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    print(f"Received webhook data: {request.data}")  # Webhookデータをログに出力
-def handle_message(event):
+    # Webhookデータをログに出力
+    print(f"Received webhook data: {request.data.decode('utf-8')}")
+
+    # ユーザーからのイベントの場合、ユーザーIDを出力
     if event.source.type == "user":
         userId = event.source.userId
         print(f"Received message from user ID: {userId}")
     else:
         print("Received event from non-user source.")
     
+    # LINEから受信したテキストメッセージを処理
     text = event.message.text
     reply_text = generate_gpt4_response(text)
     line_bot_api.reply_message(
