@@ -70,12 +70,11 @@ def generate_gpt4_response(prompt):
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     if event.source.type == "user":
-    userId = event.source.userId
-    print(f"Received message from user ID: {userId}")
-else:
-    print("Received event from non-user source.")
-
-def handle_message(event):
+        userId = event.source.userId
+        print(f"Received message from user ID: {userId}")
+    else:
+        print("Received event from non-user source.")
+    
     text = event.message.text
     reply_text = generate_gpt4_response(text)
     line_bot_api.reply_message(
