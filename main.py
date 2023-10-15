@@ -1,7 +1,6 @@
 from flask import Flask, request, abort
 import os
-import openai
-
+import requests
 from linebot import (
     LineBotApi, WebhookHandler
 )
@@ -17,26 +16,31 @@ app = Flask(__name__)
 # 環境変数取得
 YOUR_CHANNEL_ACCESS_TOKEN = os.environ["YOUR_CHANNEL_ACCESS_TOKEN"]
 YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+GPT4_API_KEY = os.environ["OPENAI_API_KEY"] # この環境変数名は適切に変更してください
+GPT4_API_URL = "https://api.openai.com/v1/engines/davinci-codex/completions"
 
 line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(YOUR_CHANNEL_SECRET)
-openai.api_key = OPENAI_API_KEY
 
-@app.route("/")
-def hello_world():
-    return "hello world!"
+def generate_gpt4_response(prompt):
+    headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {GPT4_API_KEY}'}
+    data = {
+        'prompt': prompt,
+        'max_tokens': 50,
+        'n': 1,
+        'stop': None,
+        'temperature': 0.5
+    }
 
-@app.route("/callback", methods=['POST'])
+    response = requests.post(GPT4_API_URL, headers=headers, json=data)
+    response_json = response.json()
+    return response_json['choices'][0]['text'].strip()
+
+@app.route('/callback', methods=['POST'])
 def callback():
-    # get X-Line-Signature header value
     signature = request.headers['X-Line-Signature']
-
-    # get request body as text
     body = request.get_data(as_text=True)
-    app.logger.info("Request body: " + body)
 
-    # handle webhook body
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
@@ -45,32 +49,92 @@ def callback():
     return 'OK'
 
 @handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
-    # LINEからのメッセージをログに出力
-    app.logger.info("Received message from LINE: " + event.message.text)
-    # OpenAIのAPIを使って応答を生成
-    response = openai.Completion.create(
-      model="gpt-4",
-      messages=[
-            {"role": "user", "content": event.message.text}
-        ],
-      max_tokens=150
-        #,
-      #temperature=1
-    )
-    # generated_response = response.choices[0].text.strip()
-    generated_response = response['choices'][0]['message']['content'].strip()
-
-    # LINEに応答を送信
+def handle_text_message(event):
+    text = event.message.text
+    reply_text = generate_gpt4_response(text)
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text=generated_response)
+        TextSendMessage(text=reply_text)
     )
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run()
 
+
+# from flask import Flask, request, abort
+# import os
+# import openai
+
+# from linebot import (
+#     LineBotApi, WebhookHandler
+# )
+# from linebot.exceptions import (
+#     InvalidSignatureError
+# )
+# from linebot.models import (
+#     MessageEvent, TextMessage, TextSendMessage,
+# )
+
+# app = Flask(__name__)
+
+# # 環境変数取得
+# YOUR_CHANNEL_ACCESS_TOKEN = os.environ["YOUR_CHANNEL_ACCESS_TOKEN"]
+# YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
+# OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+
+# line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
+# handler = WebhookHandler(YOUR_CHANNEL_SECRET)
+# openai.api_key = OPENAI_API_KEY
+
+# @app.route("/")
+# def hello_world():
+#     return "hello world!"
+
+# @app.route("/callback", methods=['POST'])
+# def callback():
+#     # get X-Line-Signature header value
+#     signature = request.headers['X-Line-Signature']
+
+#     # get request body as text
+#     body = request.get_data(as_text=True)
+#     app.logger.info("Request body: " + body)
+
+#     # handle webhook body
+#     try:
+#         handler.handle(body, signature)
+#     except InvalidSignatureError:
+#         abort(400)
+
+#     return 'OK'
+
+# @handler.add(MessageEvent, message=TextMessage)
+# def handle_message(event):
+#     # LINEからのメッセージをログに出力
+#     app.logger.info("Received message from LINE: " + event.message.text)
+#     # OpenAIのAPIを使って応答を生成
+#     response = openai.Completion.create(
+#       model="gpt-4",
+#       messages=[
+#             {"role": "user", "content": event.message.text}
+#         ],
+#       max_tokens=150
+#         #,
+#       #temperature=1
+#     )
+#     # generated_response = response.choices[0].text.strip()
+#     generated_response = response['choices'][0]['message']['content'].strip()
+
+#     # LINEに応答を送信
+#     line_bot_api.reply_message(
+#         event.reply_token,
+#         TextSendMessage(text=generated_response)
+#     )
+
+# if __name__ == "__main__":
+#     port = int(os.getenv("PORT", 5000))
+#     app.run(host="0.0.0.0", port=port)
+
+## GPTなし
 # from flask import Flask, request, abort
 # import os
 # import openai
