@@ -74,8 +74,11 @@ def handle_message(event):
 
     # ユーザーからのイベントの場合、ユーザーIDを出力
     if event.source.type == "user":
-        userId = event.source.userId  # この行を修正
-        print(f"Received message from user ID: {userId}")
+        userId = getattr(event.source, 'userId', None)
+        if userId:
+            print(f"Received message from user ID: {userId}")
+        else:
+            print("No userId attribute found in source.")
     else:
         print("Received event from non-user source.")
     
@@ -86,6 +89,7 @@ def handle_message(event):
         event.reply_token,
         TextSendMessage(text=reply_text)
     )
+
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
