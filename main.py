@@ -69,6 +69,8 @@ def generate_gpt4_response(prompt):
     # BOT_MEMORYを使ってconversationsリストを生成
     conversations = [{'role': 'user' if i%2==0 else 'assistant', 'content': msg} for i, msg in enumerate(reversed(BOT_MEMORY))]
     conversations.append({'role': 'user', 'content': prompt})  # ユーザーからの最新のメッセージを追加
+    # conversationsリストの内容をログに出力
+    logging.info(f"Generated conversations list: {conversations}")
 
     data = {
         'model': "gpt-4",
@@ -82,7 +84,7 @@ def generate_gpt4_response(prompt):
     response_json = response.json()
     # return response_json['choices'][0]['message']['content'].strip()
     # Add this line to log the response from OpenAI API
-    app.logger.info("Response from OpenAI API: " + str(response_json))
+    # app.logger.info("Response from OpenAI API: " + str(response_json))
 
     try:
         response = requests.post(GPT4_API_URL, headers=headers, json=data)
