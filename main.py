@@ -11,6 +11,9 @@ from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage,
 )
 import requests
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 
@@ -70,17 +73,18 @@ def generate_gpt4_response(prompt):
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     # Webhookデータをログに出力
-    print(f"Received webhook data: {request.data.decode('utf-8')}")
+    logging.info(f"Received webhook data: {request.data.decode('utf-8')}")
+
+    # event.sourceオブジェクトの属性とその値をログに出力
+    for attr in dir(event.source):
+        logging.info(f"Attribute: {attr}, Value: {getattr(event.source, attr)}")
 
     # ユーザーからのイベントの場合、ユーザーIDを出力
-    if event.source.type == "user":
-        userId = getattr(event.source, 'userId', None)
-        if userId:
-            print(f"Received message from user ID: {userId}")
-        else:
-            print("No userId attribute found in source.")
+    userId = getattr(event.source, 'user_id', None)
+    if userId:
+        logging.info(f"Received message from user ID: {userId}")
     else:
-        print("Received event from non-user source.")
+        logging.info("No userId attribute found in source.")
     
     # LINEから受信したテキストメッセージを処理
     text = event.message.text
@@ -94,6 +98,31 @@ def handle_message(event):
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
+# # stripeにアクセス
+# import stripe
+
+# stripe.api_key = "YOUR_STRIPE_SECRET_KEY"
+
+# def is_subscription_active_for_line_user(line_user_id):
+#     customers = stripe.Customer.list(limit=100)
+    
+#     for customer in customers:
+#         if customer.metadata.get('line_id') == line_user_id:
+#             subscriptions = stripe.Subscription.list(customer=customer.id)
+            
+#             for subscription in subscriptions:
+#                 if subscription.status == "active":
+#                     return True
+
+#     return False
+
+# # 使用例
+# line_user_id = "YOUR_LINE_USER_ID"
+# if is_subscription_active_for_line_user(line_user_id):
+#     print("サブスクリプションはアクティブです。")
+# else:
+#     print("サブスクリプションはアクティブではありません。")
 
 ## GPT-4 #############################
 # from flask import Flask, request, abort
