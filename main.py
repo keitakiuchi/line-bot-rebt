@@ -105,9 +105,12 @@ def handle_line_message(event):
 # stripeの情報を参照
 def get_subscription_status_for_user(userId):
     customers = stripe.Customer.list(limit=100)
+    subscriptions = stripe.Subscription.list(limit=10)
 
     for customer in customers.data:
         logger.info(customer)
+    for subscription in subscriptions.data:
+        logger.info(subscription)
     
     for customer in customers:
         if customer.metadata.get('line_id') == userId:
