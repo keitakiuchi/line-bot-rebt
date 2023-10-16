@@ -31,6 +31,7 @@ openai.api_key = OPENAI_API_KEY
 GPT4_API_URL = 'https://api.openai.com/v1/chat/completions'
 
 stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
+stripe.price.id = os.environ["SUBSCRIPTION_PRICE_ID"]
 
 @app.route("/")
 def hello_world():
@@ -107,10 +108,17 @@ def get_subscription_status_for_user(userId):
     customers = stripe.Customer.list(limit=100)
     subscriptions = stripe.Subscription.list(limit=10)
 
-    for customer in customers.data:
-        logger.info(customer)
+    # 指定された価格IDと一致するサブスクリプションを特定し、関連情報をログに出力
     for subscription in subscriptions.data:
-        logger.info(subscription)
+        if subscription["items"]["data"][0]["price"]["id"] == target_price_id:
+            line_user = subscription["metadata"].get("line_user", "N/A")  # "N/A"はline_userが存在しない場合のデフォルト値
+            status = subscription["status"]
+            logging.info(f"line_user: {line_user}, status: {status}")
+
+    # for customer in customers.data:
+    #     logger.info(customer)
+    # for subscription in subscriptions.data:
+    #     logger.info(subscription)
     
     for customer in customers:
         if customer.metadata.get('line_id') == userId:
