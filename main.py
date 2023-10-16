@@ -193,10 +193,12 @@ def get_subscription_details_for_user(userId, STRIPE_PRICE_ID):
     subscriptions = stripe.Subscription.list(limit=100)
     for subscription in subscriptions.data:
         if subscription["items"]["data"][0]["price"]["id"] == STRIPE_PRICE_ID and subscription["metadata"].get("line_user") == userId:
+            logging.info(f"Found subscription for user {userId} with status: {subscription['status']} and stripeId: {subscription['customer']}")
             return {
                 'status': subscription["status"],
                 'stripeId': subscription["customer"]
             }
+    logging.warning(f"No subscription found for user {userId} with price ID {STRIPE_PRICE_ID}")
     return None
 
 # Stripeの情報を確認する関数
