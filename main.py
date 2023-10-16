@@ -155,40 +155,33 @@ def get_system_responses_in_last_24_hours(userId):
 # LINEからのメッセージを処理し、必要に応じてStripeの情報も確認します。
 @handler.add(MessageEvent, message=TextMessage)
 def handle_line_message(event):
-    # event.sourceオブジェクトの属性とその値をログに出力
     for attr in dir(event.source):
         logging.info(f"Attribute: {attr}, Value: {getattr(event.source, attr)}")
 
-    # ユーザーからのイベントの場合、ユーザーIDを出力
     userId = getattr(event.source, 'user_id', None)
-
-    # 現在のタイムスタンプを取得
     current_timestamp = datetime.datetime.now()
 
-    # stripeIdを取得 (userIdが存在しない場合も考慮しています)
-    stripe_id = None
-    if userId:
-        subscription_details = get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
-        stripe_id = subscription_details['stripeId'] if subscription_details else None
+    # stripeIdを取得
+    subscription_details = get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
+    stripe_id = subscription_details['stripeId'] if subscription_details else None
+    subscription_status = subscription_details['status'] if subscription_details else None
 
     # LINEからのメッセージをログに保存
     log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text)
 
     response_count = get_system_responses_in_last_24_hours(userId)
-    if userId and check_subscription_status(userId) == "active": ## ここで調整 ## active
+    
+    if subscription_status == "active":
         reply_text = generate_gpt4_response(event.message.text)
     else:
-        if response_count < 2: ## ここで調整 ##
+        if response_count < 2: 
             reply_text = generate_gpt4_response(event.message.text)
         else:
             reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。"
 
-    # メッセージをログに保存
     log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text)
-
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
-# stripeの情報を参照
 def get_subscription_details_for_user(userId, STRIPE_PRICE_ID):
     subscriptions = stripe.Subscription.list(limit=100)
     for subscription in subscriptions.data:
