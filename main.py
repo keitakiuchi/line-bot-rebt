@@ -30,7 +30,7 @@ handler = WebhookHandler(YOUR_CHANNEL_SECRET)
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 GPT4_API_URL = 'https://api.openai.com/v1/chat/completions'
 
-STRIPE_API_KEY = os.environ["STRIPE_SECRET_KEY"]
+stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
 STRIPE_PRICE_ID = os.environ["SUBSCRIPTION_PRICE_ID"]
 
 @app.route("/")
