@@ -77,7 +77,7 @@ def generate_gpt4_response(prompt):
         return "Sorry, I couldn't understand that."
         
 # LINEからのメッセージを処理し、必要に応じてStripeの情報も確認します。
-@LINE_BOT_API.add(MessageEvent, message=TextMessage)
+@handler.add(MessageEvent, message=TextMessage)
 def handle_line_message(event):
     # # Webhookデータをログに出力
     # logging.info(f"Received webhook data: {request.data.decode('utf-8')}")
