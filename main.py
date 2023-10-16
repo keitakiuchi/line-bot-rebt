@@ -87,8 +87,7 @@ def handle_line_message(event):
     if userId:
         logging.info(f"Received message from user ID: {userId}")
         status = check_subscription_status(userId)
-        if status != "active":
-        # if status == "active":
+        if status == "negative": # active
             text = event.message.text
             reply_text = generate_gpt4_response(text)
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
