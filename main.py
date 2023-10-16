@@ -115,20 +115,20 @@ def get_subscription_status_for_user(userId, STRIPE_PRICE_ID):
 
     return "Finished logging."
 
-# # Stripeの情報を確認する関数
-# def check_subscription_status(userId):
-#     status = get_subscription_status_for_user(userId, STRIPE_PRICE_ID)
-#     if status == "active":
-#         logging.info("サブスクリプションはアクティブです。")
-#     elif status == "idなし":
-#         logging.info("サブスクリプションのIDがありません。")
-#     else:
-#         logging.info(f"サブスクリプションのステータスは{status}です。")
+# Stripeの情報を確認する関数
+def check_subscription_status(userId):
+    status = get_subscription_status_for_user(userId, STRIPE_PRICE_ID)
+    if status == "active":
+        logging.info("サブスクリプションはアクティブです。")
+    elif status == "idなし":
+        logging.info("サブスクリプションのIDがありません。")
+    else:
+        logging.info(f"サブスクリプションのステータスは{status}です。")
 
-# # 以下の関数はメッセージが来たときに呼び出されるとします。
-# def on_message_received(message):
-#     userId = message.get('userId') 
-#     handle_message(userId)
+# 以下の関数はメッセージが来たときに呼び出されるとします。
+def on_message_received(message):
+    userId = message.get('userId') 
+    handle_message(userId)
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
