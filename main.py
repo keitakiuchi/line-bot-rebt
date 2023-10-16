@@ -25,7 +25,7 @@ YOUR_CHANNEL_ACCESS_TOKEN = os.environ["YOUR_CHANNEL_ACCESS_TOKEN"]
 YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
-LINE_BOT_API = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
+line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(YOUR_CHANNEL_SECRET)
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 GPT4_API_URL = 'https://api.openai.com/v1/chat/completions'
@@ -98,7 +98,7 @@ def handle_line_message(event):
     # LINEから受信したテキストメッセージを処理
     text = event.message.text
     reply_text = generate_gpt4_response(text)
-    LINE_BOT_API.reply_message(
+    line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=reply_text)
     )
@@ -158,7 +158,7 @@ if __name__ == "__main__":
 # import os
 # import openai
 # from linebot import (
-#     LineBotApi, WebhookLINE_BOT_API
+#     LineBotApi, WebhookHandler
 # )
 # from linebot.exceptions import (
 #     InvalidSignatureError
@@ -178,8 +178,8 @@ if __name__ == "__main__":
 # YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
 # OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
-#  = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
-# LINE_BOT_API = WebhookLINE_BOT_API(YOUR_CHANNEL_SECRET)
+# line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
+# handler = WebhookHandler(YOUR_CHANNEL_SECRET)
 # OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 # GPT4_API_URL = 'https://api.openai.com/v1/chat/completions'
 
@@ -245,7 +245,7 @@ if __name__ == "__main__":
 #     # LINEから受信したテキストメッセージを処理
 #     text = event.message.text
 #     reply_text = generate_gpt4_response(text)
-#     .reply_message(
+#     LINE_BOT_API.reply_message(
 #         event.reply_token,
 #         TextSendMessage(text=reply_text)
 #     )
