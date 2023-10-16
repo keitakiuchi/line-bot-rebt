@@ -124,18 +124,22 @@ def handle_line_message(event):
     if userId:
         subscription_details = get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
         stripe_id = subscription_details['stripeId'] if subscription_details else None
+        subscription_status = subscription_details['status'] if subscription_details else None
 
-    # LINEからのメッセージをログに保存
-    log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text)
+        # LINEからのメッセージをログに保存
+        log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text)
 
-    response_count = get_system_responses_in_last_24_hours(userId)
-    if userId and check_subscription_status(userId) == "active": ## ここで調整 ## active
-        reply_text = generate_gpt4_response(event.message.text)
-    else:
-        if response_count < 2: ## ここで調整 ##
+        # ステータスがactiveなら、利用回数の制限を気にせずに応答
+        if subscription_status == "active":
             reply_text = generate_gpt4_response(event.message.text)
         else:
-            reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。"
+            response_count = get_system_responses_in_last_24_hours(userId)
+            if response_count < 2: 
+                reply_text = generate_gpt4_response(event.message.text)
+            else:
+                reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。"
+    else:
+        reply_text = "エラーが発生しました。"
 
     # メッセージをログに保存
     log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text)
