@@ -78,9 +78,6 @@ def generate_gpt4_response(prompt):
 # LINEからのメッセージを処理し、必要に応じてStripeの情報も確認します。
 @handler.add(MessageEvent, message=TextMessage)
 def handle_line_message(event):
-    # # Webhookデータをログに出力
-    # logging.info(f"Received webhook data: {request.data.decode('utf-8')}")
-
     # event.sourceオブジェクトの属性とその値をログに出力
     for attr in dir(event.source):
         logging.info(f"Attribute: {attr}, Value: {getattr(event.source, attr)}")
@@ -89,41 +86,25 @@ def handle_line_message(event):
     userId = getattr(event.source, 'user_id', None)
     if userId:
         logging.info(f"Received message from user ID: {userId}")
-        # Stripeの情報を確認
-        check_subscription_status(userId)
+        status = check_subscription_status(userId)
+        if status == "active":
+            text = event.message.text
+            reply_text = generate_gpt4_response(text)
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
     else:
         logging.info("No userId attribute found in source.")
-
-    # LINEから受信したテキストメッセージを処理
-    text = event.message.text
-    reply_text = generate_gpt4_response(text)
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=reply_text)
-    )
 
 # stripeの情報を参照
 def get_subscription_status_for_user(userId, STRIPE_PRICE_ID):
     subscriptions = stripe.Subscription.list(limit=10)
-
-    # 指定された価格IDと一致するサブスクリプションを特定し、関連情報をログに出力
     for subscription in subscriptions.data:
-        if subscription["items"]["data"][0]["price"]["id"] == STRIPE_PRICE_ID:
-            line_user = subscription["metadata"].get("line_user", "N/A")  # "N/A"はline_userが存在しない場合のデフォルト値
-            status = subscription["status"]  # ステータスを直接取得
-            logging.info(f"line_user: {line_user}, status: {status}")
-
-    return "Finished logging."
+        if subscription["items"]["data"][0]["price"]["id"] == STRIPE_PRICE_ID and subscription["metadata"].get("line_user") == userId:
+            return subscription["status"]
+    return None
 
 # Stripeの情報を確認する関数
 def check_subscription_status(userId):
-    status = get_subscription_status_for_user(userId, STRIPE_PRICE_ID)
-    if status == "active":
-        logging.info("サブスクリプションはアクティブです。")
-    elif status == "idなし":
-        logging.info("サブスクリプションのIDがありません。")
-    else:
-        logging.info(f"サブスクリプションのステータスは{status}です。")
+    return get_subscription_status_for_user(userId, STRIPE_PRICE_ID)
 
 # 以下の関数はメッセージが来たときに呼び出されるとします。
 def on_message_received(message):
@@ -241,47 +222,31 @@ if __name__ == "__main__":
 
 # # stripeの情報を参照
 # def get_subscription_status_for_user(userId, STRIPE_PRICE_ID):
-#     customers = stripe.Customer.list(limit=100)
 #     subscriptions = stripe.Subscription.list(limit=10)
 
 #     # 指定された価格IDと一致するサブスクリプションを特定し、関連情報をログに出力
 #     for subscription in subscriptions.data:
 #         if subscription["items"]["data"][0]["price"]["id"] == STRIPE_PRICE_ID:
 #             line_user = subscription["metadata"].get("line_user", "N/A")  # "N/A"はline_userが存在しない場合のデフォルト値
-#             status = get_subscription_status_for_user(userId, STRIPE_PRICE_ID)
+#             status = subscription["status"]  # ステータスを直接取得
 #             logging.info(f"line_user: {line_user}, status: {status}")
 
-#     # for customer in customers.data:
-#     #     logger.info(customer)
-#     # for subscription in subscriptions.data:
-#     #     logger.info(subscription)
-    
-#     for customer in customers:
-#         if customer.metadata.get('line_id') == userId:
-#             subscriptions = stripe.Subscription.list(customer=customer.id)
-            
-#             if not subscriptions.data:  # 顧客がサブスクリプションを持っていない場合
-#                 return "idなし"
+#     return "Finished logging."
 
-#             for subscription in subscriptions.data:
-#                 return subscription.status  # activeまたはそれ以外のステータスを返す
+# # Stripeの情報を確認する関数
+# def check_subscription_status(userId):
+#     status = get_subscription_status_for_user(userId, STRIPE_PRICE_ID)
+#     if status == "active":
+#         logging.info("サブスクリプションはアクティブです。")
+#     elif status == "idなし":
+#         logging.info("サブスクリプションのIDがありません。")
+#     else:
+#         logging.info(f"サブスクリプションのステータスは{status}です。")
 
-#     return "idなし"
-
-# # # Stripeの情報を確認する関数
-# # def check_subscription_status(userId):
-# #     status = get_subscription_status_for_user(userId, STRIPE_PRICE_ID)
-# #     if status == "active":
-# #         logging.info("サブスクリプションはアクティブです。")
-# #     elif status == "idなし":
-# #         logging.info("サブスクリプションのIDがありません。")
-# #     else:
-# #         logging.info(f"サブスクリプションのステータスは{status}です。")
-
-# # # 以下の関数はメッセージが来たときに呼び出されるとします。
-# # def on_message_received(message):
-# #     userId = message.get('userId') 
-# #     handle_message(userId)
+# # 以下の関数はメッセージが来たときに呼び出されるとします。
+# def on_message_received(message):
+#     userId = message.get('userId') 
+#     handle_message(userId)
 
 # if __name__ == "__main__":
 #     port = int(os.getenv("PORT", 5000))
