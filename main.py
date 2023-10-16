@@ -106,10 +106,10 @@ def get_subscription_status_for_user(userId, STRIPE_PRICE_ID):
 def check_subscription_status(userId):
     return get_subscription_status_for_user(userId, STRIPE_PRICE_ID)
 
-# 以下の関数はメッセージが来たときに呼び出されるとします。
-def on_message_received(message):
-    userId = message.get('userId') 
-    handle_message(userId)
+# # 以下の関数はメッセージが来たときに呼び出されるとします。
+# def on_message_received(message):
+#     userId = message.get('userId') 
+#     handle_message(userId)
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
