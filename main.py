@@ -1,6 +1,5 @@
 from flask import Flask, request, abort
 import os
-import openai
 from linebot import (
     LineBotApi, WebhookHandler
 )
@@ -19,7 +18,6 @@ import psycopg2
 import datetime
 
 app = Flask(__name__)
-BOT_MEMORY = [] # Herokuが再起動する度にリセットされるため、永続的な保存が必要な場合はデータベースなどを利用
 
 # 環境変数取得
 YOUR_CHANNEL_ACCESS_TOKEN = os.environ["YOUR_CHANNEL_ACCESS_TOKEN"]
@@ -58,33 +56,22 @@ def callback():
     return 'OK'
 
 def generate_gpt4_response(prompt):
-    sys_prompt = """
-        あなたはカウンセラーです。
-        """
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {OPENAI_API_KEY}'
     }
-
-    # BOT_MEMORYを使ってconversationsリストを生成
-    conversations = [{'role': 'user' if i%2==0 else 'assistant', 'content': msg} for i, msg in enumerate(reversed(BOT_MEMORY))]
-    conversations.append({'role': 'user', 'content': prompt})  # ユーザーからの最新のメッセージを追加
-    # conversationsリストの内容をログに出力
-    logging.info(f"Generated conversations list: {conversations}")
-
     data = {
         'model': "gpt-4",
-        'messages': conversations,
-        'temperature': 1
+        'messages': [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt}
+        ]
     }
-    # OpenAI APIに送られるデータをログに出力
-    app.logger.info("Sending to OpenAI API: " + str(data))
 
-    response = requests.post(GPT4_API_URL, headers=headers, json=data)
     response_json = response.json()
     # return response_json['choices'][0]['message']['content'].strip()
     # Add this line to log the response from OpenAI API
-    # app.logger.info("Response from OpenAI API: " + str(response_json))
+    app.logger.info("Response from OpenAI API: " + str(response_json))
 
     try:
         response = requests.post(GPT4_API_URL, headers=headers, json=data)
@@ -118,62 +105,48 @@ def get_system_responses_in_last_24_hours(userId):
 # LINEからのメッセージを処理し、必要に応じてStripeの情報も確認します。
 @handler.add(MessageEvent, message=TextMessage)
 def handle_line_message(event):
-    global BOT_MEMORY  # BOT_MEMORY をグローバルとして宣言
-
+    # event.sourceオブジェクトの属性とその値をログに出力
     for attr in dir(event.source):
         logging.info(f"Attribute: {attr}, Value: {getattr(event.source, attr)}")
 
+    # ユーザーからのイベントの場合、ユーザーIDを出力
     userId = getattr(event.source, 'user_id', None)
+
+    # 現在のタイムスタンプを取得
     current_timestamp = datetime.datetime.now()
 
-    user_message_text = event.message.text  # ユーザーからのメッセージテキストを取得
-
-    memorySize = 5
-
-    # メッセージが「リセット」かどうかチェック
-    if user_message_text.lower() == "リセット":
-        BOT_MEMORY = []
-        reply_text = "記憶がリセットされました。"
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
-        return  # 処理を終了
-        
-    for attr in dir(event.source):
-        logging.info(f"Attribute: {attr}, Value: {getattr(event.source, attr)}")
-
-    userId = getattr(event.source, 'user_id', None)
-    current_timestamp = datetime.datetime.now()
-
-    # stripeIdを取得
-    subscription_details = get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
-    stripe_id = subscription_details['stripeId'] if subscription_details else None
-    subscription_status = subscription_details['status'] if subscription_details else None
+    # stripeIdを取得 (userIdが存在しない場合も考慮しています)
+    stripe_id = None
+    if userId:
+        subscription_details = get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
+        stripe_id = subscription_details['stripeId'] if subscription_details else None
 
     # LINEからのメッセージをログに保存
     log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text)
 
     response_count = get_system_responses_in_last_24_hours(userId)
-    
-    if subscription_status == "active":
+    if userId and check_subscription_status(userId) == "negathive": ## ここで調整 ## active
         reply_text = generate_gpt4_response(event.message.text)
     else:
-        if response_count < 2: 
+        if response_count < 2: ## ここで調整 ##
             reply_text = generate_gpt4_response(event.message.text)
         else:
             reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。"
 
+    # メッセージをログに保存
     log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text)
+
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
+# stripeの情報を参照
 def get_subscription_details_for_user(userId, STRIPE_PRICE_ID):
     subscriptions = stripe.Subscription.list(limit=100)
     for subscription in subscriptions.data:
         if subscription["items"]["data"][0]["price"]["id"] == STRIPE_PRICE_ID and subscription["metadata"].get("line_user") == userId:
-            logging.info(f"Found subscription for user {userId} with status: {subscription['status']} and stripeId: {subscription['customer']}")
             return {
                 'status': subscription["status"],
                 'stripeId': subscription["customer"]
             }
-    logging.warning(f"No subscription found for user {userId} with price ID {STRIPE_PRICE_ID}")
     return None
 
 # Stripeの情報を確認する関数
@@ -201,6 +174,7 @@ def log_to_database(timestamp, sender, userId, stripeId, message):
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
 ## データベース実装
 #####################################
