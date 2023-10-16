@@ -23,10 +23,9 @@ app = Flask(__name__)
 # 環境変数取得
 YOUR_CHANNEL_ACCESS_TOKEN = os.environ["YOUR_CHANNEL_ACCESS_TOKEN"]
 YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-
 line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(YOUR_CHANNEL_SECRET)
+
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 GPT4_API_URL = 'https://api.openai.com/v1/chat/completions'
 
@@ -51,7 +50,7 @@ def callback():
 def generate_gpt4_response(prompt):
     headers = {
         'Content-Type': 'application/json',
-        'Authorization': f'Bearer {OPENAI_API_KEY}' # API_KEYが変わったので、動くかチェック！
+        'Authorization': f'Bearer {OPENAI_API_KEY}'
     }
     data = {
         'model': "gpt-4",
@@ -105,21 +104,10 @@ def handle_line_message(event):
 
 # stripeの情報を参照
 def get_subscription_status_for_user(userId, STRIPE_PRICE_ID):
-    customers = stripe.Customer.list(limit=100)
-    subscriptions = stripe.Subscription.list(limit=10)
+    # キャッシュまたはデータベースからユーザのサブスクリプション情報を取得しようとするロジックをここに追加
 
-    # 指定された価格IDと一致するサブスクリプションを特定し、関連情報をログに出力
-    for subscription in subscriptions.data:
-        if subscription["items"]["data"][0]["price"]["id"] == STRIPE_PRICE_ID:
-            line_user = subscription["metadata"].get("line_user", "N/A")  # "N/A"はline_userが存在しない場合のデフォルト値
-            status = get_subscription_status_for_user(userId, STRIPE_PRICE_ID)
-            logging.info(f"line_user: {line_user}, status: {status}")
-
-    # for customer in customers.data:
-    #     logger.info(customer)
-    # for subscription in subscriptions.data:
-    #     logger.info(subscription)
-    
+    # キャッシュに情報がない場合、Stripe APIを呼び出す
+    customers = stripe.Customer.list(email=userId)  # 仮にuserIdがemailとして保存されている場合
     for customer in customers:
         if customer.metadata.get('line_id') == userId:
             subscriptions = stripe.Subscription.list(customer=customer.id)
@@ -128,7 +116,8 @@ def get_subscription_status_for_user(userId, STRIPE_PRICE_ID):
                 return "idなし"
 
             for subscription in subscriptions.data:
-                return subscription.status  # activeまたはそれ以外のステータスを返す
+                if subscription["items"]["data"][0]["price"]["id"] == STRIPE_PRICE_ID:
+                    return subscription.status  # activeまたはそれ以外のステータスを返す
 
     return "idなし"
 
@@ -144,7 +133,7 @@ def check_subscription_status(userId):
 
 # 以下の関数はメッセージが来たときに呼び出されるとします。
 def on_message_received(message):
-    userId = message.get('userId')  # 仮にuserIdがメッセージから取得できるとします。
+    userId = message.get('userId') 
     handle_message(userId)
 
 if __name__ == "__main__":
