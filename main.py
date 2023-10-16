@@ -43,7 +43,7 @@ def callback():
     body = request.get_data(as_text=True)
     app.logger.info("Request body: " + body)
     try:
-        LINE_BOT_API.handle(body, signature)
+        handler.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
     return 'OK'
@@ -193,7 +193,7 @@ if __name__ == "__main__":
 #     body = request.get_data(as_text=True)
 #     app.logger.info("Request body: " + body)
 #     try:
-#         LINE_BOT_API.handle(body, signature)
+#         handler.handle(body, signature)
 #     except InvalidSignatureError:
 #         abort(400)
 #     return 'OK'
@@ -226,7 +226,7 @@ if __name__ == "__main__":
 #         app.logger.error(f"OpenAI API request failed: {e}")
 #         return "Sorry, I couldn't understand that."
         
-# @LINE_BOT_API.add(MessageEvent, message=TextMessage)
+# @handler.add(MessageEvent, message=TextMessage)
 # def handle_message(event):
 #     # Webhookデータをログに出力
 #     logging.info(f"Received webhook data: {request.data.decode('utf-8')}")
@@ -298,13 +298,13 @@ if __name__ == "__main__":
 
 #     # handle webhook body
 #     try:
-#         LINE_BOT_API.handle(body, signature)
+#         handler.handle(body, signature)
 #     except InvalidSignatureError:
 #         abort(400)
 
 #     return 'OK'
 
-# @LINE_BOT_API.add(MessageEvent, message=TextMessage)
+# @handler.add(MessageEvent, message=TextMessage)
 # def handle_message(event):
 #     # LINEからのメッセージをログに出力
 #     app.logger.info("Received message from LINE: " + event.message.text)
@@ -364,13 +364,13 @@ if __name__ == "__main__":
 
 #     # handle webhook body
 #     try:
-#         LINE_BOT_API.handle(body, signature)
+#         handler.handle(body, signature)
 #     except InvalidSignatureError:
 #         abort(400)
 
 #     return 'OK'
 
-# @LINE_BOT_API.add(MessageEvent, message=TextMessage)
+# @handler.add(MessageEvent, message=TextMessage)
 # def handle_message(event):
 #     LINE_BOT_API.reply_message(
 #         event.reply_token,
