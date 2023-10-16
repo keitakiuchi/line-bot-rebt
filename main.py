@@ -134,7 +134,7 @@ def get_subscription_status_for_user(userId, STRIPE_PRICE_ID):
 
 # Stripeの情報を確認する関数
 def check_subscription_status(userId):
-    status = get_subscription_status_for_user(userId)
+    status = get_subscription_status_for_user(userId, STRIPE_PRICE_ID)
     if status == "active":
         logging.info("サブスクリプションはアクティブです。")
     elif status == "idなし":
