@@ -3,3 +3,4 @@ line-bot-sdk==1.8.0
 gunicorn==21.2.0
 openai
 aiohttp==3.8.6
+stripe
