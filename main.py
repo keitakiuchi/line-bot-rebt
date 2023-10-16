@@ -57,6 +57,54 @@ def callback():
     return 'OK'
 
 def generate_gpt4_response(prompt):
+    sys_prompt = "
+        あなたはカウンセラーです。次の手順に従って私の相談に乗ってください。/n
+        1. まずユーザーの発言を理解し、それに対して1つの意味を加えて1文で言い換えます
+        （これを聞き返し1と呼びます）。/n
+        2. 次に、ユーザーがその聞き返しに対して返答（例えば、「はい」）を行ったら、
+        その返答に対してさらに1つの意味を加えて1文で言い換えます（これを聞き返し2と
+        呼びます）。/n
+        3. 聞き返しを2回行ったら、ユーザーの返答（例えば「はい」）を受けて、
+        初めて次の質問を行います。/n
+        4. ユーザーがその質問に答えたら、その答えに対して再度1つの意味を加えて1文で
+        言い換えます（これを聞き返し1と呼びます）。/n
+        5. 次に、ユーザーがその聞き返しに対して返答（例えば、「はい」）を行ったら、
+        その返答に対してさらに1つの意味を加えて1文で言い換えます（これを聞き返し2と
+        呼びます）。/n
+        6. ユーザーの返答（例えば「はい」）を挟んで、聞き返し1と聞き返し2を
+        行ったら、ユーザーの返答（例えば「はい」）を受けて、
+        次の質問を行います。1度質問をした後は、ユーザーの応答を挟んで、聞き返し1と聞き返し2を行い、次のユーザの返答を待つまで、次の質問をしてはいけません。/n
+        7. これらの手順（聞き返し1→ユーザの返答→聞き返し2→ユーザの返答→質問）を
+        繰り返します。
+        質問の順序は次の通りです：
+        困りごとを明確化する質問、どんな風になることを望んでいるか尋ねる質問、
+        今少しでもできていることを尋ねる質問、他にできていることを尋ねる質問、
+        望む未来に向けて役に立ちそうな資源を尋ねる質問、
+        さらに望む未来に近づくための最初の一歩についての質問、
+        最初の一歩に向けてできそうなことを尋ねる質問。/n
+        以下に正しいやり取りの一部のパターンを示します。\n
+        例1\n
+        忙しくて寝る暇もありません\n
+        → 睡眠時間が減ることに困っているんですね。\n
+        → はい\n
+        → 忙しい中でもなんとか睡眠時間は確保したいという思いがあるんですね。\n
+        → はい\n→ 睡眠時間が減るとどんな風に困りますか？\n\n
+        例2\n
+        睡眠時間が減ると体調を崩します\n
+        → 体調を崩すことを心配しているんですね。\n
+        → はい\n
+        → 健康的に働き続けるために睡眠時間が大事だと感じているんですね。\n
+        → そうです\n
+        → どんな風になることを望んでいますか？\n\n
+        例3\n
+        苦しみから開放されたいです。しかし、責任を放棄はできない\n
+        → 苦しみから開放されたいと思うと同時に、責任を手放すことはできないとも思うんですね。\n
+        → はい\n
+        → 自分の進むべき道を模索しているんですね。\n
+        → そうかもしれません\n
+        → 今少しでも、自分の進むべき道に近づけていると思うのは、どんなときですか？\n
+        この手順で相談に乗ってください。
+        "
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {OPENAI_API_KEY}'
@@ -64,7 +112,7 @@ def generate_gpt4_response(prompt):
     data = {
         'model': "gpt-4",
         'messages': [
-            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "system", "content": sys_prompt},
             {"role": "user", "content": prompt}
         ]
     }
@@ -127,7 +175,7 @@ def handle_line_message(event):
     log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text)
 
     response_count = get_system_responses_in_last_24_hours(userId)
-    if userId and check_subscription_status(userId) == "negathive": ## ここで調整 ## active
+    if userId and check_subscription_status(userId) == "active": ## ここで調整 ## active
         reply_text = generate_gpt4_response(event.message.text)
     else:
         if response_count < 2: ## ここで調整 ##
@@ -197,6 +245,7 @@ if __name__ == "__main__":
 # logger = logging.getLogger(__name__) # stripeの情報の確認
 # import stripe
 # import psycopg2
+# import datetime
 
 # app = Flask(__name__)
 
@@ -211,6 +260,15 @@ if __name__ == "__main__":
 
 # stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
 # STRIPE_PRICE_ID = os.environ["SUBSCRIPTION_PRICE_ID"]
+
+# # db接続
+# def get_connection():
+#     dsn = f"host={os.environ['DB_HOST']} " \
+#           f"port=5432 " \
+#           f"dbname={os.environ['DB_NAME']} " \
+#           f"user={os.environ['DB_USER']} " \
+#           f"password={os.environ['DB_PASS']}"
+#     return psycopg2.connect(dsn)
 
 # @app.route("/")
 # def hello_world():
@@ -255,6 +313,26 @@ if __name__ == "__main__":
 #         app.logger.error(f"OpenAI API request failed: {e}")
 #         return "Sorry, I couldn't understand that."
         
+# def get_system_responses_in_last_24_hours(userId):
+#     # この関数の中でデータベースにアクセスして、指定されたユーザーに対する過去24時間以内のシステムの応答数を取得します。
+#     # 以下は仮の実装の例です。
+#     connection = get_connection()
+#     cursor = connection.cursor()
+#     try:
+#         query = """
+#         SELECT COUNT(*) FROM line_bot_logs 
+#         WHERE sender='system' AND lineId=%s AND timestamp > NOW() - INTERVAL '24 HOURS';
+#         """
+#         cursor.execute(query, (userId,))
+#         result = cursor.fetchone()
+#         return result[0]
+#     except Exception as e:
+#         print(f"Error: {e}")
+#         return 0
+#     finally:
+#         cursor.close()
+#         connection.close()
+
 # # LINEからのメッセージを処理し、必要に応じてStripeの情報も確認します。
 # @handler.add(MessageEvent, message=TextMessage)
 # def handle_line_message(event):
@@ -264,19 +342,32 @@ if __name__ == "__main__":
 
 #     # ユーザーからのイベントの場合、ユーザーIDを出力
 #     userId = getattr(event.source, 'user_id', None)
+
+#     # 現在のタイムスタンプを取得
+#     current_timestamp = datetime.datetime.now()
+
+#     # stripeIdを取得 (userIdが存在しない場合も考慮しています)
+#     stripe_id = None
 #     if userId:
-#         logging.info(f"Received message from user ID: {userId}")
-#         status = check_subscription_status(userId)
-#         if status == "active": # この部分を実際のステータスに合わせて調整してください
-#             text = event.message.text
-#             reply_text = generate_gpt4_response(text)
-#             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
-#         else:
-#             # サブスクリプションがactiveでない場合、以下のメッセージを返す
-#             reply_text = "利用回数の上限に達しました。明日以降またお待ちしています。"
-#             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+#         subscription_details = get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
+#         stripe_id = subscription_details['stripeId'] if subscription_details else None
+
+#     # LINEからのメッセージをログに保存
+#     log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text)
+
+#     response_count = get_system_responses_in_last_24_hours(userId)
+#     if userId and check_subscription_status(userId) == "negathive": ## ここで調整 ## active
+#         reply_text = generate_gpt4_response(event.message.text)
 #     else:
-#         logging.info("No userId attribute found in source.")
+#         if response_count < 2: ## ここで調整 ##
+#             reply_text = generate_gpt4_response(event.message.text)
+#         else:
+#             reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。"
+
+#     # メッセージをログに保存
+#     log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text)
+
+#     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
 # # stripeの情報を参照
 # def get_subscription_details_for_user(userId, STRIPE_PRICE_ID):
@@ -294,7 +385,7 @@ if __name__ == "__main__":
 #     return get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
 
 # # データをdbに入れる関数
-# def insert_into_line_bot_logs(timestamp, sender, lineId, stripeId, message):
+# def log_to_database(timestamp, sender, userId, stripeId, message):
 #     connection = get_connection()
 #     cursor = connection.cursor()
 #     try:
@@ -302,7 +393,7 @@ if __name__ == "__main__":
 #         INSERT INTO line_bot_logs (timestamp, sender, lineId, stripeId, message) 
 #         VALUES (%s, %s, %s, %s, %s);
 #         """
-#         cursor.execute(query, (timestamp, sender, lineId, stripeId, message))
+#         cursor.execute(query, (timestamp, sender, userId, stripeId, message))
 #         connection.commit()
 #     except Exception as e:
 #         print(f"Error: {e}")
@@ -313,234 +404,4 @@ if __name__ == "__main__":
 
 # if __name__ == "__main__":
 #     port = int(os.getenv("PORT", 5000))
-#     app.run(host="0.0.0.0", port=port)
-
-
-######################################
-## GPT-4 #############################
-# from flask import Flask, request, abort
-# import os
-# import openai
-# from linebot import (
-#     LineBotApi, WebhookHandler
-# )
-# from linebot.exceptions import (
-#     InvalidSignatureError
-# )
-# from linebot.models import (
-#     MessageEvent, TextMessage, TextSendMessage,
-# )
-# import requests
-# import logging
-
-# logging.basicConfig(level=logging.INFO)
-
-# app = Flask(__name__)
-
-# # 環境変数取得
-# YOUR_CHANNEL_ACCESS_TOKEN = os.environ["YOUR_CHANNEL_ACCESS_TOKEN"]
-# YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
-# OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-
-# line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
-# handler = WebhookHandler(YOUR_CHANNEL_SECRET)
-# OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-# GPT4_API_URL = 'https://api.openai.com/v1/chat/completions'
-
-# @app.route("/")
-# def hello_world():
-#     return "hello world!"
-
-# @app.route("/callback", methods=['POST'])
-# def callback():
-#     signature = request.headers['X-Line-Signature']
-#     body = request.get_data(as_text=True)
-#     app.logger.info("Request body: " + body)
-#     try:
-#         handler.handle(body, signature)
-#     except InvalidSignatureError:
-#         abort(400)
-#     return 'OK'
-
-# def generate_gpt4_response(prompt):
-#     headers = {
-#         'Content-Type': 'application/json',
-#         'Authorization': f'Bearer {OPENAI_API_KEY}'
-#     }
-#     data = {
-#         'model': "gpt-4",
-#         'messages': [
-#             {"role": "system", "content": "You are a helpful assistant."},
-#             {"role": "user", "content": prompt}
-#         ]
-#     }
-
-#     response = requests.post(GPT4_API_URL, headers=headers, json=data)
-#     response_json = response.json()
-#     # return response_json['choices'][0]['message']['content'].strip()
-#     # Add this line to log the response from OpenAI API
-#     app.logger.info("Response from OpenAI API: " + str(response_json))
-
-#     try:
-#         response = requests.post(GPT4_API_URL, headers=headers, json=data)
-#         response.raise_for_status()  # Check if the request was successful
-#         response_json = response.json()
-#         return response_json['choices'][0]['message']['content'].strip()
-#     except requests.RequestException as e:
-#         app.logger.error(f"OpenAI API request failed: {e}")
-#         return "Sorry, I couldn't understand that."
-        
-# @handler.add(MessageEvent, message=TextMessage)
-# def handle_message(event):
-#     # Webhookデータをログに出力
-#     logging.info(f"Received webhook data: {request.data.decode('utf-8')}")
-
-#     # event.sourceオブジェクトの属性とその値をログに出力
-#     for attr in dir(event.source):
-#         logging.info(f"Attribute: {attr}, Value: {getattr(event.source, attr)}")
-
-#     # ユーザーからのイベントの場合、ユーザーIDを出力
-#     userId = getattr(event.source, 'user_id', None)
-#     if userId:
-#         logging.info(f"Received message from user ID: {userId}")
-#     else:
-#         logging.info("No userId attribute found in source.")
-    
-#     # LINEから受信したテキストメッセージを処理
-#     text = event.message.text
-#     reply_text = generate_gpt4_response(text)
-#     LINE_BOT_API.reply_message(
-#         event.reply_token,
-#         TextSendMessage(text=reply_text)
-#     )
-
-
-# if __name__ == "__main__":
-#     port = int(os.getenv("PORT", 5000))
-#     app.run(host="0.0.0.0", port=port)
-
-
-######################################
-## davinci ###########################
-# from flask import Flask, request, abort
-# import os
-# import openai
-
-# from linebot import (
-#     LineBotApi, WebhookLINE_BOT_API
-# )
-# from linebot.exceptions import (
-#     InvalidSignatureError
-# )
-# from linebot.models import (
-#     MessageEvent, TextMessage, TextSendMessage,
-# )
-
-# app = Flask(__name__)
-
-# # 環境変数取得
-# YOUR_CHANNEL_ACCESS_TOKEN = os.environ["YOUR_CHANNEL_ACCESS_TOKEN"]
-# YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
-# OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-
-#  = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
-# LINE_BOT_API = WebhookLINE_BOT_API(YOUR_CHANNEL_SECRET)
-# OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-
-# @app.route("/")
-# def hello_world():
-#     return "hello world!"
-
-# @app.route("/callback", methods=['POST'])
-# def callback():
-#     # get X-Line-Signature header value
-#     signature = request.headers['X-Line-Signature']
-
-#     # get request body as text
-#     body = request.get_data(as_text=True)
-#     app.logger.info("Request body: " + body)
-
-#     # handle webhook body
-#     try:
-#         handler.handle(body, signature)
-#     except InvalidSignatureError:
-#         abort(400)
-
-#     return 'OK'
-
-# @handler.add(MessageEvent, message=TextMessage)
-# def handle_message(event):
-#     # LINEからのメッセージをログに出力
-#     app.logger.info("Received message from LINE: " + event.message.text)
-#     response = openai.Completion.create(
-#     engine="davinci",
-#     prompt=event.message.text,
-#     max_tokens=150
-#   )
-#   generated_response = response.choices[0].text.strip()
-
-#     # LINEに応答を送信
-#     .reply_message(
-#         event.reply_token,
-#         TextSendMessage(text=generated_response)
-#     )
-
-# if __name__ == "__main__":
-#     port = int(os.getenv("PORT", 5000))
-#     app.run(host="0.0.0.0", port=port)
-
-## GPTなし ##########################
-# from flask import Flask, request, abort
-# import os
-# import openai
-
-# from linebot import (
-#     LineBotApi, WebhookLINE_BOT_API
-# )
-# from linebot.exceptions import (
-#     InvalidSignatureError
-# )
-# from linebot.models import (
-#     MessageEvent, TextMessage, TextSendMessage,
-# )
-
-# app = Flask(__name__)
-
-# #環境変数取得
-# YOUR_CHANNEL_ACCESS_TOKEN = os.environ["YOUR_CHANNEL_ACCESS_TOKEN"]
-# YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
-
-#  = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
-# LINE_BOT_API = WebhookLINE_BOT_API(YOUR_CHANNEL_SECRET)
-
-# @app.route("/")
-# def hello_world():
-#     return "hello world!"
-
-# @app.route("/callback", methods=['POST'])
-# def callback():
-#     # get X-Line-Signature header value
-#     signature = request.headers['X-Line-Signature']
-
-#     # get request body as text
-#     body = request.get_data(as_text=True)
-#     app.logger.info("Request body: " + body)
-
-#     # handle webhook body
-#     try:
-#         handler.handle(body, signature)
-#     except InvalidSignatureError:
-#         abort(400)
-
-#     return 'OK'
-
-# @handler.add(MessageEvent, message=TextMessage)
-# def handle_message(event):
-#     LINE_BOT_API.reply_message(
-#         event.reply_token,
-#         TextSendMessage(text=event.message.text))
-
-# if __name__ == "__main__":
-# #    app.run()
-#     port = int(os.getenv("PORT"))
 #     app.run(host="0.0.0.0", port=port)
