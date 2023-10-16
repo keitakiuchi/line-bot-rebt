@@ -104,10 +104,21 @@ def handle_line_message(event):
 
 # stripeの情報を参照
 def get_subscription_status_for_user(userId, STRIPE_PRICE_ID):
-    # キャッシュまたはデータベースからユーザのサブスクリプション情報を取得しようとするロジックをここに追加
+    customers = stripe.Customer.list(limit=100)
+    subscriptions = stripe.Subscription.list(limit=10)
 
-    # キャッシュに情報がない場合、Stripe APIを呼び出す
-    customers = stripe.Customer.list(email=userId)  # 仮にuserIdがemailとして保存されている場合
+    # 指定された価格IDと一致するサブスクリプションを特定し、関連情報をログに出力
+    for subscription in subscriptions.data:
+        if subscription["items"]["data"][0]["price"]["id"] == STRIPE_PRICE_ID:
+            line_user = subscription["metadata"].get("line_user", "N/A")  # "N/A"はline_userが存在しない場合のデフォルト値
+            status = get_subscription_status_for_user(userId, STRIPE_PRICE_ID)
+            logging.info(f"line_user: {line_user}, status: {status}")
+
+    # for customer in customers.data:
+    #     logger.info(customer)
+    # for subscription in subscriptions.data:
+    #     logger.info(subscription)
+    
     for customer in customers:
         if customer.metadata.get('line_id') == userId:
             subscriptions = stripe.Subscription.list(customer=customer.id)
@@ -116,8 +127,7 @@ def get_subscription_status_for_user(userId, STRIPE_PRICE_ID):
                 return "idなし"
 
             for subscription in subscriptions.data:
-                if subscription["items"]["data"][0]["price"]["id"] == STRIPE_PRICE_ID:
-                    return subscription.status  # activeまたはそれ以外のステータスを返す
+                return subscription.status  # activeまたはそれ以外のステータスを返す
 
     return "idなし"
 
