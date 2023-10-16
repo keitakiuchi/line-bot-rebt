@@ -87,16 +87,16 @@ def handle_line_message(event):
     if userId:
         logging.info(f"Received message from user ID: {userId}")
         status = check_subscription_status(userId)
-        if status == "negative": # active
+        if status == "negative": # この部分を実際のステータスに合わせて調整してください
             text = event.message.text
             reply_text = generate_gpt4_response(text)
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+        else:
+            # サブスクリプションがactiveでない場合、以下のメッセージを返す
+            reply_text = "利用回数の上限に達しました。明日以降またお待ちしています。"
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
     else:
-        # サブスクリプションがactiveでない場合、以下のメッセージを返す
-        reply_text = "利用回数の上限に達しました。明日以降またお待ちしています。"
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
-else:
-    logging.info("No userId attribute found in source.")
+        logging.info("No userId attribute found in source.")
 
 # stripeの情報を参照
 def get_subscription_status_for_user(userId, STRIPE_PRICE_ID):
