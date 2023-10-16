@@ -11,12 +11,11 @@ from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage,
 )
 import requests
-
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__) # stripeの情報の確認
-
 import stripe
+import psycopg2
 
 app = Flask(__name__)
 
@@ -99,16 +98,37 @@ def handle_line_message(event):
         logging.info("No userId attribute found in source.")
 
 # stripeの情報を参照
-def get_subscription_status_for_user(userId, STRIPE_PRICE_ID):
-    subscriptions = stripe.Subscription.list(limit=10)
+def get_subscription_details_for_user(userId, STRIPE_PRICE_ID):
+    subscriptions = stripe.Subscription.list(limit=100)
     for subscription in subscriptions.data:
         if subscription["items"]["data"][0]["price"]["id"] == STRIPE_PRICE_ID and subscription["metadata"].get("line_user") == userId:
-            return subscription["status"]
+            return {
+                'status': subscription["status"],
+                'stripeId': subscription["customer"]
+            }
     return None
 
 # Stripeの情報を確認する関数
 def check_subscription_status(userId):
     return get_subscription_status_for_user(userId, STRIPE_PRICE_ID)
+
+# データをdbに入れる関数
+def insert_into_line_bot_logs(timestamp, sender, lineId, stripeId, message):
+    connection = get_connection()
+    cursor = connection.cursor()
+    try:
+        query = """
+        INSERT INTO line_bot_logs (timestamp, sender, lineId, stripeId, message) 
+        VALUES (%s, %s, %s, %s, %s);
+        """
+        cursor.execute(query, (timestamp, sender, lineId, stripeId, message))
+        connection.commit()
+    except Exception as e:
+        print(f"Error: {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
+        connection.close()
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
