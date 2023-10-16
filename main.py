@@ -14,6 +14,7 @@ import requests
 
 import logging
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__) # stripeの情報の確認
 
 import stripe
 
@@ -104,6 +105,9 @@ def handle_line_message(event):
 # stripeの情報を参照
 def get_subscription_status_for_user(userId):
     customers = stripe.Customer.list(limit=100)
+
+    for customer in customers.data:
+    logger.info(customer)
     
     for customer in customers:
         if customer.metadata.get('line_id') == userId:
