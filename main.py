@@ -25,13 +25,13 @@ YOUR_CHANNEL_ACCESS_TOKEN = os.environ["YOUR_CHANNEL_ACCESS_TOKEN"]
 YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
-line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
+LINE_BOT_API = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(YOUR_CHANNEL_SECRET)
-openai.api_key = OPENAI_API_KEY
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 GPT4_API_URL = 'https://api.openai.com/v1/chat/completions'
 
-stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
-stripe.price.id = os.environ["SUBSCRIPTION_PRICE_ID"]
+STRIPE_API_KEY = os.environ["STRIPE_SECRET_KEY"]
+STRIPE_PRICE_ID = os.environ["SUBSCRIPTION_PRICE_ID"]
 
 @app.route("/")
 def hello_world():
@@ -43,7 +43,7 @@ def callback():
     body = request.get_data(as_text=True)
     app.logger.info("Request body: " + body)
     try:
-        handler.handle(body, signature)
+        LINE_BOT_API.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
     return 'OK'
@@ -51,7 +51,7 @@ def callback():
 def generate_gpt4_response(prompt):
     headers = {
         'Content-Type': 'application/json',
-        'Authorization': f'Bearer {OPENAI_API_KEY}'
+        'Authorization': f'Bearer {OPENAI_API_KEY}' # API_KEYが変わったので、動くかチェック！
     }
     data = {
         'model': "gpt-4",
@@ -77,7 +77,7 @@ def generate_gpt4_response(prompt):
         return "Sorry, I couldn't understand that."
         
 # LINEからのメッセージを処理し、必要に応じてStripeの情報も確認します。
-@handler.add(MessageEvent, message=TextMessage)
+@LINE_BOT_API.add(MessageEvent, message=TextMessage)
 def handle_line_message(event):
     # # Webhookデータをログに出力
     # logging.info(f"Received webhook data: {request.data.decode('utf-8')}")
@@ -98,21 +98,21 @@ def handle_line_message(event):
     # LINEから受信したテキストメッセージを処理
     text = event.message.text
     reply_text = generate_gpt4_response(text)
-    line_bot_api.reply_message(
+    .reply_message(
         event.reply_token,
         TextSendMessage(text=reply_text)
     )
 
 # stripeの情報を参照
-def get_subscription_status_for_user(userId):
+def get_subscription_status_for_user(userId, STRIPE_PRICE_ID):
     customers = stripe.Customer.list(limit=100)
     subscriptions = stripe.Subscription.list(limit=10)
 
     # 指定された価格IDと一致するサブスクリプションを特定し、関連情報をログに出力
     for subscription in subscriptions.data:
-        if subscription["items"]["data"][0]["price"]["id"] == target_price_id:
+        if subscription["items"]["data"][0]["price"]["id"] == STRIPE_PRICE_ID:
             line_user = subscription["metadata"].get("line_user", "N/A")  # "N/A"はline_userが存在しない場合のデフォルト値
-            status = subscription["status"]
+            status = get_subscription_status_for_user(userId, STRIPE_PRICE_ID)
             logging.info(f"line_user: {line_user}, status: {status}")
 
     # for customer in customers.data:
@@ -158,7 +158,7 @@ if __name__ == "__main__":
 # import os
 # import openai
 # from linebot import (
-#     LineBotApi, WebhookHandler
+#     LineBotApi, WebhookLINE_BOT_API
 # )
 # from linebot.exceptions import (
 #     InvalidSignatureError
@@ -178,9 +178,9 @@ if __name__ == "__main__":
 # YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
 # OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
-# line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
-# handler = WebhookHandler(YOUR_CHANNEL_SECRET)
-# openai.api_key = OPENAI_API_KEY
+#  = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
+# LINE_BOT_API = WebhookLINE_BOT_API(YOUR_CHANNEL_SECRET)
+# OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 # GPT4_API_URL = 'https://api.openai.com/v1/chat/completions'
 
 # @app.route("/")
@@ -193,7 +193,7 @@ if __name__ == "__main__":
 #     body = request.get_data(as_text=True)
 #     app.logger.info("Request body: " + body)
 #     try:
-#         handler.handle(body, signature)
+#         LINE_BOT_API.handle(body, signature)
 #     except InvalidSignatureError:
 #         abort(400)
 #     return 'OK'
@@ -226,7 +226,7 @@ if __name__ == "__main__":
 #         app.logger.error(f"OpenAI API request failed: {e}")
 #         return "Sorry, I couldn't understand that."
         
-# @handler.add(MessageEvent, message=TextMessage)
+# @LINE_BOT_API.add(MessageEvent, message=TextMessage)
 # def handle_message(event):
 #     # Webhookデータをログに出力
 #     logging.info(f"Received webhook data: {request.data.decode('utf-8')}")
@@ -245,7 +245,7 @@ if __name__ == "__main__":
 #     # LINEから受信したテキストメッセージを処理
 #     text = event.message.text
 #     reply_text = generate_gpt4_response(text)
-#     line_bot_api.reply_message(
+#     .reply_message(
 #         event.reply_token,
 #         TextSendMessage(text=reply_text)
 #     )
@@ -263,7 +263,7 @@ if __name__ == "__main__":
 # import openai
 
 # from linebot import (
-#     LineBotApi, WebhookHandler
+#     LineBotApi, WebhookLINE_BOT_API
 # )
 # from linebot.exceptions import (
 #     InvalidSignatureError
@@ -279,9 +279,9 @@ if __name__ == "__main__":
 # YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
 # OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
-# line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
-# handler = WebhookHandler(YOUR_CHANNEL_SECRET)
-# openai.api_key = OPENAI_API_KEY
+#  = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
+# LINE_BOT_API = WebhookLINE_BOT_API(YOUR_CHANNEL_SECRET)
+# OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
 # @app.route("/")
 # def hello_world():
@@ -298,13 +298,13 @@ if __name__ == "__main__":
 
 #     # handle webhook body
 #     try:
-#         handler.handle(body, signature)
+#         LINE_BOT_API.handle(body, signature)
 #     except InvalidSignatureError:
 #         abort(400)
 
 #     return 'OK'
 
-# @handler.add(MessageEvent, message=TextMessage)
+# @LINE_BOT_API.add(MessageEvent, message=TextMessage)
 # def handle_message(event):
 #     # LINEからのメッセージをログに出力
 #     app.logger.info("Received message from LINE: " + event.message.text)
@@ -316,7 +316,7 @@ if __name__ == "__main__":
 #   generated_response = response.choices[0].text.strip()
 
 #     # LINEに応答を送信
-#     line_bot_api.reply_message(
+#     .reply_message(
 #         event.reply_token,
 #         TextSendMessage(text=generated_response)
 #     )
@@ -331,7 +331,7 @@ if __name__ == "__main__":
 # import openai
 
 # from linebot import (
-#     LineBotApi, WebhookHandler
+#     LineBotApi, WebhookLINE_BOT_API
 # )
 # from linebot.exceptions import (
 #     InvalidSignatureError
@@ -346,8 +346,8 @@ if __name__ == "__main__":
 # YOUR_CHANNEL_ACCESS_TOKEN = os.environ["YOUR_CHANNEL_ACCESS_TOKEN"]
 # YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
 
-# line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
-# handler = WebhookHandler(YOUR_CHANNEL_SECRET)
+#  = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
+# LINE_BOT_API = WebhookLINE_BOT_API(YOUR_CHANNEL_SECRET)
 
 # @app.route("/")
 # def hello_world():
@@ -364,15 +364,15 @@ if __name__ == "__main__":
 
 #     # handle webhook body
 #     try:
-#         handler.handle(body, signature)
+#         LINE_BOT_API.handle(body, signature)
 #     except InvalidSignatureError:
 #         abort(400)
 
 #     return 'OK'
 
-# @handler.add(MessageEvent, message=TextMessage)
+# @LINE_BOT_API.add(MessageEvent, message=TextMessage)
 # def handle_message(event):
-#     line_bot_api.reply_message(
+#     LINE_BOT_API.reply_message(
 #         event.reply_token,
 #         TextSendMessage(text=event.message.text))
 
