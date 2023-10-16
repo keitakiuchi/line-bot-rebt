@@ -84,6 +84,26 @@ def generate_gpt4_response(prompt):
         app.logger.error(f"OpenAI API request failed: {e}")
         return "Sorry, I couldn't understand that."
         
+def get_system_responses_in_last_24_hours(userId):
+    # この関数の中でデータベースにアクセスして、指定されたユーザーに対する過去24時間以内のシステムの応答数を取得します。
+    # 以下は仮の実装の例です。
+    connection = get_connection()
+    cursor = connection.cursor()
+    try:
+        query = """
+        SELECT COUNT(*) FROM line_bot_logs 
+        WHERE sender='system' AND lineId=%s AND timestamp > NOW() - INTERVAL '24 HOURS';
+        """
+        cursor.execute(query, (userId,))
+        result = cursor.fetchone()
+        return result[0]
+    except Exception as e:
+        print(f"Error: {e}")
+        return 0
+    finally:
+        cursor.close()
+        connection.close()
+
 # LINEからのメッセージを処理し、必要に応じてStripeの情報も確認します。
 @handler.add(MessageEvent, message=TextMessage)
 def handle_line_message(event):
