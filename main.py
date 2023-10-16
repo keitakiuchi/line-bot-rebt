@@ -57,7 +57,7 @@ def callback():
     return 'OK'
 
 def generate_gpt4_response(prompt):
-    sys_prompt = "
+    sys_prompt = """
         あなたはカウンセラーです。次の手順に従って私の相談に乗ってください。/n
         1. まずユーザーの発言を理解し、それに対して1つの意味を加えて1文で言い換えます
         （これを聞き返し1と呼びます）。/n
@@ -104,7 +104,7 @@ def generate_gpt4_response(prompt):
         → そうかもしれません\n
         → 今少しでも、自分の進むべき道に近づけていると思うのは、どんなときですか？\n
         この手順で相談に乗ってください。
-        "
+        """
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {OPENAI_API_KEY}'
