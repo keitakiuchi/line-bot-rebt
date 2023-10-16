@@ -98,7 +98,7 @@ def handle_line_message(event):
     # LINEから受信したテキストメッセージを処理
     text = event.message.text
     reply_text = generate_gpt4_response(text)
-    .reply_message(
+    LINE_BOT_API.reply_message(
         event.reply_token,
         TextSendMessage(text=reply_text)
     )
