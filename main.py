@@ -32,6 +32,15 @@ GPT4_API_URL = 'https://api.openai.com/v1/chat/completions'
 stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
 STRIPE_PRICE_ID = os.environ["SUBSCRIPTION_PRICE_ID"]
 
+# db接続
+def get_connection():
+    dsn = f"host={os.environ['DB_HOST']} " \
+          f"port=5432 " \
+          f"dbname={os.environ['DB_NAME']} " \
+          f"user={os.environ['DB_USER']} " \
+          f"password={os.environ['DB_PASS']}"
+    return psycopg2.connect(dsn)
+
 @app.route("/")
 def hello_world():
     return "hello world!"
