@@ -127,10 +127,10 @@ def handle_line_message(event):
     log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text)
 
     response_count = get_system_responses_in_last_24_hours(userId)
-    if userId and check_subscription_status(userId) == "active":
+    if userId and check_subscription_status(userId) == "negathive": ## ここで調整 ## active
         reply_text = generate_gpt4_response(event.message.text)
     else:
-        if response_count < 2:
+        if response_count < 2: ## ここで調整 ##
             reply_text = generate_gpt4_response(event.message.text)
         else:
             reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。"
