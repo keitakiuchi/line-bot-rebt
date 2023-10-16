@@ -75,6 +75,8 @@ def generate_gpt4_response(prompt):
         'messages': conversations,
         'temperature': 1
     }
+    # OpenAI APIに送られるデータをログに出力
+    app.logger.info("Sending to OpenAI API: " + str(data))
 
     response = requests.post(GPT4_API_URL, headers=headers, json=data)
     response_json = response.json()
