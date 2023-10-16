@@ -56,6 +56,9 @@ def callback():
     return 'OK'
 
 def generate_gpt4_response(prompt):
+    sys_prompt = """
+        You are a helpful assistant.
+        """
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {OPENAI_API_KEY}'
@@ -63,9 +66,10 @@ def generate_gpt4_response(prompt):
     data = {
         'model': "gpt-4",
         'messages': [
-            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "system", "content": sys_prompt},
             {"role": "user", "content": prompt}
-        ]
+        ],
+        'temperature': 1
     }
 
     response_json = response.json()
@@ -125,7 +129,7 @@ def handle_line_message(event):
     log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text)
 
     response_count = get_system_responses_in_last_24_hours(userId)
-    if userId and check_subscription_status(userId) == "negathive": ## ここで調整 ## active
+    if userId and check_subscription_status(userId) == "active": ## ここで調整 ## active
         reply_text = generate_gpt4_response(event.message.text)
     else:
         if response_count < 2: ## ここで調整 ##
