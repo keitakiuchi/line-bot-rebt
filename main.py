@@ -55,20 +55,23 @@ def callback():
         abort(400)
     return 'OK'
 
-def generate_gpt4_response(prompt):
-    sys_prompt = """
-        You are a helpful assistant.
-        """
+def generate_gpt4_response(prompt, userId):
+    sys_prompt = "You are a helpful assistant."
+
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {OPENAI_API_KEY}'
     }
+    # 過去の会話履歴を取得
+    conversation_history = get_conversation_history(userId)
+    # sys_promptを会話の最初に追加
+    conversation_history.insert(0, {"role": "system", "content": sys_prompt})
+    # ユーザーからの最新のメッセージを追加
+    conversation_history.append({"role": "user", "content": prompt})
+
     data = {
         'model': "gpt-4",
-        'messages': [
-            {"role": "system", "content": sys_prompt},
-            {"role": "user", "content": prompt}
-        ],
+        'messages': conversation_history,
         'temperature': 1
     }
 
@@ -129,11 +132,11 @@ def handle_line_message(event):
 
         # ステータスがactiveなら、利用回数の制限を気にせずに応答
         if subscription_status == "active":
-            reply_text = generate_gpt4_response(event.message.text)
+            reply_text = generate_gpt4_response(event.message.text, userId)
         else:
             response_count = get_system_responses_in_last_24_hours(userId)
             if response_count < 2: 
-                reply_text = generate_gpt4_response(event.message.text)
+                reply_text = generate_gpt4_response(event.message.text, userId)
             else:
                 reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。"
     else:
@@ -177,6 +180,33 @@ def log_to_database(timestamp, sender, userId, stripeId, message):
         cursor.close()
         connection.close()
 
+# 会話履歴を参照する関数
+def get_conversation_history(userId):
+    connection = get_connection()
+    cursor = connection.cursor()
+    conversations = []
+
+    try:
+        query = """
+        SELECT sender, message FROM line_bot_logs 
+        WHERE lineId=%s AND timestamp > NOW() - INTERVAL '12 HOURS' 
+        ORDER BY timestamp DESC LIMIT 5;
+        """
+        cursor.execute(query, (userId,))
+        results = cursor.fetchall()
+        for result in results:
+            role = 'user' if result[0] == 'user' else 'assistant'
+            conversations.append({"role": role, "content": result[1]})
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        cursor.close()
+        connection.close()
+    
+    # 最新の会話が最後に来るように反転
+    return conversations[::-1]
+
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
@@ -186,7 +216,6 @@ if __name__ == "__main__":
 #####################################
 # from flask import Flask, request, abort
 # import os
-# import openai
 # from linebot import (
 #     LineBotApi, WebhookHandler
 # )
@@ -243,6 +272,9 @@ if __name__ == "__main__":
 #     return 'OK'
 
 # def generate_gpt4_response(prompt):
+#     sys_prompt = """
+#         You are a helpful assistant.
+#         """
 #     headers = {
 #         'Content-Type': 'application/json',
 #         'Authorization': f'Bearer {OPENAI_API_KEY}'
@@ -250,25 +282,23 @@ if __name__ == "__main__":
 #     data = {
 #         'model': "gpt-4",
 #         'messages': [
-#             {"role": "system", "content": "You are a helpful assistant."},
+#             {"role": "system", "content": sys_prompt},
 #             {"role": "user", "content": prompt}
-#         ]
+#         ],
+#         'temperature': 1
 #     }
-
-#     response = requests.post(GPT4_API_URL, headers=headers, json=data)
-#     response_json = response.json()
-#     # return response_json['choices'][0]['message']['content'].strip()
-#     # Add this line to log the response from OpenAI API
-#     app.logger.info("Response from OpenAI API: " + str(response_json))
 
 #     try:
 #         response = requests.post(GPT4_API_URL, headers=headers, json=data)
 #         response.raise_for_status()  # Check if the request was successful
-#         response_json = response.json()
+#         response_json = response.json() # This line has been moved here
+#         # Add this line to log the response from OpenAI API
+#         app.logger.info("Response from OpenAI API: " + str(response_json))
 #         return response_json['choices'][0]['message']['content'].strip()
 #     except requests.RequestException as e:
 #         app.logger.error(f"OpenAI API request failed: {e}")
 #         return "Sorry, I couldn't understand that."
+
         
 # def get_system_responses_in_last_24_hours(userId):
 #     # この関数の中でデータベースにアクセスして、指定されたユーザーに対する過去24時間以内のシステムの応答数を取得します。
@@ -308,18 +338,22 @@ if __name__ == "__main__":
 #     if userId:
 #         subscription_details = get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
 #         stripe_id = subscription_details['stripeId'] if subscription_details else None
+#         subscription_status = subscription_details['status'] if subscription_details else None
 
-#     # LINEからのメッセージをログに保存
-#     log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text)
+#         # LINEからのメッセージをログに保存
+#         log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text)
 
-#     response_count = get_system_responses_in_last_24_hours(userId)
-#     if userId and check_subscription_status(userId) == "negathive": ## ここで調整 ## active
-#         reply_text = generate_gpt4_response(event.message.text)
-#     else:
-#         if response_count < 2: ## ここで調整 ##
+#         # ステータスがactiveなら、利用回数の制限を気にせずに応答
+#         if subscription_status == "active":
 #             reply_text = generate_gpt4_response(event.message.text)
 #         else:
-#             reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。"
+#             response_count = get_system_responses_in_last_24_hours(userId)
+#             if response_count < 2: 
+#                 reply_text = generate_gpt4_response(event.message.text)
+#             else:
+#                 reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。"
+#     else:
+#         reply_text = "エラーが発生しました。"
 
 #     # メッセージをログに保存
 #     log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text)
