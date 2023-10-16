@@ -72,19 +72,17 @@ def generate_gpt4_response(prompt):
         'temperature': 1
     }
 
-    response_json = response.json()
-    # return response_json['choices'][0]['message']['content'].strip()
-    # Add this line to log the response from OpenAI API
-    app.logger.info("Response from OpenAI API: " + str(response_json))
-
     try:
         response = requests.post(GPT4_API_URL, headers=headers, json=data)
         response.raise_for_status()  # Check if the request was successful
-        response_json = response.json()
+        response_json = response.json() # This line has been moved here
+        # Add this line to log the response from OpenAI API
+        app.logger.info("Response from OpenAI API: " + str(response_json))
         return response_json['choices'][0]['message']['content'].strip()
     except requests.RequestException as e:
         app.logger.error(f"OpenAI API request failed: {e}")
         return "Sorry, I couldn't understand that."
+
         
 def get_system_responses_in_last_24_hours(userId):
     # この関数の中でデータベースにアクセスして、指定されたユーザーに対する過去24時間以内のシステムの応答数を取得します。
