@@ -19,6 +19,7 @@ import psycopg2
 import datetime
 
 app = Flask(__name__)
+BOT_MEMORY = [] # Herokuが再起動する度にリセットされるため、永続的な保存が必要な場合はデータベースなどを利用
 
 # 環境変数取得
 YOUR_CHANNEL_ACCESS_TOKEN = os.environ["YOUR_CHANNEL_ACCESS_TOKEN"]
@@ -58,63 +59,21 @@ def callback():
 
 def generate_gpt4_response(prompt):
     sys_prompt = """
-        あなたはカウンセラーです。次の手順に従って私の相談に乗ってください。/n
-        1. まずユーザーの発言を理解し、それに対して1つの意味を加えて1文で言い換えます
-        （これを聞き返し1と呼びます）。/n
-        2. 次に、ユーザーがその聞き返しに対して返答（例えば、「はい」）を行ったら、
-        その返答に対してさらに1つの意味を加えて1文で言い換えます（これを聞き返し2と
-        呼びます）。/n
-        3. 聞き返しを2回行ったら、ユーザーの返答（例えば「はい」）を受けて、
-        初めて次の質問を行います。/n
-        4. ユーザーがその質問に答えたら、その答えに対して再度1つの意味を加えて1文で
-        言い換えます（これを聞き返し1と呼びます）。/n
-        5. 次に、ユーザーがその聞き返しに対して返答（例えば、「はい」）を行ったら、
-        その返答に対してさらに1つの意味を加えて1文で言い換えます（これを聞き返し2と
-        呼びます）。/n
-        6. ユーザーの返答（例えば「はい」）を挟んで、聞き返し1と聞き返し2を
-        行ったら、ユーザーの返答（例えば「はい」）を受けて、
-        次の質問を行います。1度質問をした後は、ユーザーの応答を挟んで、聞き返し1と聞き返し2を行い、次のユーザの返答を待つまで、次の質問をしてはいけません。/n
-        7. これらの手順（聞き返し1→ユーザの返答→聞き返し2→ユーザの返答→質問）を
-        繰り返します。
-        質問の順序は次の通りです：
-        困りごとを明確化する質問、どんな風になることを望んでいるか尋ねる質問、
-        今少しでもできていることを尋ねる質問、他にできていることを尋ねる質問、
-        望む未来に向けて役に立ちそうな資源を尋ねる質問、
-        さらに望む未来に近づくための最初の一歩についての質問、
-        最初の一歩に向けてできそうなことを尋ねる質問。/n
-        以下に正しいやり取りの一部のパターンを示します。\n
-        例1\n
-        忙しくて寝る暇もありません\n
-        → 睡眠時間が減ることに困っているんですね。\n
-        → はい\n
-        → 忙しい中でもなんとか睡眠時間は確保したいという思いがあるんですね。\n
-        → はい\n→ 睡眠時間が減るとどんな風に困りますか？\n\n
-        例2\n
-        睡眠時間が減ると体調を崩します\n
-        → 体調を崩すことを心配しているんですね。\n
-        → はい\n
-        → 健康的に働き続けるために睡眠時間が大事だと感じているんですね。\n
-        → そうです\n
-        → どんな風になることを望んでいますか？\n\n
-        例3\n
-        苦しみから開放されたいです。しかし、責任を放棄はできない\n
-        → 苦しみから開放されたいと思うと同時に、責任を手放すことはできないとも思うんですね。\n
-        → はい\n
-        → 自分の進むべき道を模索しているんですね。\n
-        → そうかもしれません\n
-        → 今少しでも、自分の進むべき道に近づけていると思うのは、どんなときですか？\n
-        この手順で相談に乗ってください。
+        あなたはカウンセラーです。
         """
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {OPENAI_API_KEY}'
     }
+
+    # BOT_MEMORYを使ってconversationsリストを生成
+    conversations = [{'role': 'user' if i%2==0 else 'assistant', 'content': msg} for i, msg in enumerate(reversed(BOT_MEMORY))]
+    conversations.append({'role': 'user', 'content': prompt})  # ユーザーからの最新のメッセージを追加
+
     data = {
         'model': "gpt-4",
-        'messages': [
-            {"role": "system", "content": sys_prompt},
-            {"role": "user", "content": prompt}
-        ]
+        'messages': conversations,
+        'temperature': 1
     }
 
     response = requests.post(GPT4_API_URL, headers=headers, json=data)
@@ -155,6 +114,25 @@ def get_system_responses_in_last_24_hours(userId):
 # LINEからのメッセージを処理し、必要に応じてStripeの情報も確認します。
 @handler.add(MessageEvent, message=TextMessage)
 def handle_line_message(event):
+    global BOT_MEMORY  # BOT_MEMORY をグローバルとして宣言
+
+    for attr in dir(event.source):
+        logging.info(f"Attribute: {attr}, Value: {getattr(event.source, attr)}")
+
+    userId = getattr(event.source, 'user_id', None)
+    current_timestamp = datetime.datetime.now()
+
+    user_message_text = event.message.text  # ユーザーからのメッセージテキストを取得
+
+    memorySize = 5
+
+    # メッセージが「リセット」かどうかチェック
+    if user_message_text.lower() == "リセット":
+        BOT_MEMORY = []
+        reply_text = "記憶がリセットされました。"
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+        return  # 処理を終了
+        
     for attr in dir(event.source):
         logging.info(f"Attribute: {attr}, Value: {getattr(event.source, attr)}")
 
