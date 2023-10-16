@@ -104,47 +104,31 @@ def handle_line_message(event):
 
 # stripeの情報を参照
 def get_subscription_status_for_user(userId, STRIPE_PRICE_ID):
-    customers = stripe.Customer.list(limit=100)
     subscriptions = stripe.Subscription.list(limit=10)
 
     # 指定された価格IDと一致するサブスクリプションを特定し、関連情報をログに出力
     for subscription in subscriptions.data:
         if subscription["items"]["data"][0]["price"]["id"] == STRIPE_PRICE_ID:
             line_user = subscription["metadata"].get("line_user", "N/A")  # "N/A"はline_userが存在しない場合のデフォルト値
-            status = get_subscription_status_for_user(userId, STRIPE_PRICE_ID)
+            status = subscription["status"]  # ステータスを直接取得
             logging.info(f"line_user: {line_user}, status: {status}")
 
-    # for customer in customers.data:
-    #     logger.info(customer)
-    # for subscription in subscriptions.data:
-    #     logger.info(subscription)
-    
-    for customer in customers:
-        if customer.metadata.get('line_id') == userId:
-            subscriptions = stripe.Subscription.list(customer=customer.id)
-            
-            if not subscriptions.data:  # 顧客がサブスクリプションを持っていない場合
-                return "idなし"
+    return "Finished logging."
 
-            for subscription in subscriptions.data:
-                return subscription.status  # activeまたはそれ以外のステータスを返す
+# # Stripeの情報を確認する関数
+# def check_subscription_status(userId):
+#     status = get_subscription_status_for_user(userId, STRIPE_PRICE_ID)
+#     if status == "active":
+#         logging.info("サブスクリプションはアクティブです。")
+#     elif status == "idなし":
+#         logging.info("サブスクリプションのIDがありません。")
+#     else:
+#         logging.info(f"サブスクリプションのステータスは{status}です。")
 
-    return "idなし"
-
-# Stripeの情報を確認する関数
-def check_subscription_status(userId):
-    status = get_subscription_status_for_user(userId, STRIPE_PRICE_ID)
-    if status == "active":
-        logging.info("サブスクリプションはアクティブです。")
-    elif status == "idなし":
-        logging.info("サブスクリプションのIDがありません。")
-    else:
-        logging.info(f"サブスクリプションのステータスは{status}です。")
-
-# 以下の関数はメッセージが来たときに呼び出されるとします。
-def on_message_received(message):
-    userId = message.get('userId') 
-    handle_message(userId)
+# # 以下の関数はメッセージが来たときに呼び出されるとします。
+# def on_message_received(message):
+#     userId = message.get('userId') 
+#     handle_message(userId)
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
