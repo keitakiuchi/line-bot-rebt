@@ -110,7 +110,7 @@ def get_subscription_details_for_user(userId, STRIPE_PRICE_ID):
 
 # Stripeの情報を確認する関数
 def check_subscription_status(userId):
-    return get_subscription_status_for_user(userId, STRIPE_PRICE_ID)
+    return get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
 
 # データをdbに入れる関数
 def insert_into_line_bot_logs(timestamp, sender, lineId, stripeId, message):
