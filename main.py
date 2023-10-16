@@ -107,7 +107,7 @@ def get_subscription_status_for_user(userId):
     customers = stripe.Customer.list(limit=100)
 
     for customer in customers.data:
-    logger.info(customer)
+        logger.info(customer)
     
     for customer in customers:
         if customer.metadata.get('line_id') == userId:
