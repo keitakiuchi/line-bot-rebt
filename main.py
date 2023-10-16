@@ -77,8 +77,8 @@ def generate_gpt4_response(prompt):
 # LINEからのメッセージを処理し、必要に応じてStripeの情報も確認します。
 @handler.add(MessageEvent, message=TextMessage)
 def handle_line_message(event):
-    # Webhookデータをログに出力
-    logging.info(f"Received webhook data: {request.data.decode('utf-8')}")
+    # # Webhookデータをログに出力
+    # logging.info(f"Received webhook data: {request.data.decode('utf-8')}")
 
     # event.sourceオブジェクトの属性とその値をログに出力
     for attr in dir(event.source):
@@ -100,6 +100,22 @@ def handle_line_message(event):
         event.reply_token,
         TextSendMessage(text=reply_text)
     )
+
+# stripeの情報を参照
+def get_subscription_status_for_user(userId):
+    customers = stripe.Customer.list(limit=100)
+    
+    for customer in customers:
+        if customer.metadata.get('line_id') == userId:
+            subscriptions = stripe.Subscription.list(customer=customer.id)
+            
+            if not subscriptions.data:  # 顧客がサブスクリプションを持っていない場合
+                return "idなし"
+
+            for subscription in subscriptions.data:
+                return subscription.status  # activeまたはそれ以外のステータスを返す
+
+    return "idなし"
 
 # Stripeの情報を確認する関数
 def check_subscription_status(userId):
