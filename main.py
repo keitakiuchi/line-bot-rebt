@@ -74,8 +74,9 @@ def generate_gpt4_response(prompt):
         app.logger.error(f"OpenAI API request failed: {e}")
         return "Sorry, I couldn't understand that."
         
+# LINEからのメッセージを処理し、必要に応じてStripeの情報も確認します。
 @handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
+def handle_line_message(event):
     # Webhookデータをログに出力
     logging.info(f"Received webhook data: {request.data.decode('utf-8')}")
 
@@ -87,9 +88,11 @@ def handle_message(event):
     userId = getattr(event.source, 'user_id', None)
     if userId:
         logging.info(f"Received message from user ID: {userId}")
+        # Stripeの情報を確認
+        check_subscription_status(userId)
     else:
         logging.info("No userId attribute found in source.")
-    
+
     # LINEから受信したテキストメッセージを処理
     text = event.message.text
     reply_text = generate_gpt4_response(text)
@@ -98,36 +101,24 @@ def handle_message(event):
         TextSendMessage(text=reply_text)
     )
 
+# Stripeの情報を確認する関数
+def check_subscription_status(userId):
+    status = get_subscription_status_for_user(userId)
+    if status == "active":
+        logging.info("サブスクリプションはアクティブです。")
+    elif status == "idなし":
+        logging.info("サブスクリプションのIDがありません。")
+    else:
+        logging.info(f"サブスクリプションのステータスは{status}です。")
+
+# 以下の関数はメッセージが来たときに呼び出されるとします。
+def on_message_received(message):
+    userId = message.get('userId')  # 仮にuserIdがメッセージから取得できるとします。
+    handle_message(userId)
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
-# stripeの情報を参照
-def get_subscription_status_for_user(userId):
-    customers = stripe.Customer.list(limit=100)
-    
-    for customer in customers:
-        if customer.metadata.get('line_id') == userId:
-            subscriptions = stripe.Subscription.list(customer=customer.id)
-            
-            if not subscriptions.data:  # 顧客がサブスクリプションを持っていない場合
-                return "idなし"
-
-            for subscription in subscriptions.data:
-                return subscription.status  # activeまたはそれ以外のステータスを返す
-
-    return "idなし"
-
-# 使用例
-status = get_subscription_status_for_user(userId)
-
-if status == "active":
-    logging.info("サブスクリプションはアクティブです。")
-elif status == "idなし":
-    logging.info("サブスクリプションのIDがありません。")
-else:
-    logging.info(f"サブスクリプションのステータスは{status}です。")
 
 
 ######################################
