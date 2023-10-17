@@ -172,7 +172,7 @@ def deactivate_conversation_history(userId):
 def handle_line_message(event):
     userId = getattr(event.source, 'user_id', None)
 
-    if event.message.text == "キャンセル" and userId:
+    if event.message.text == "リセット" and userId:
         deactivate_conversation_history(userId)
         reply_text = "記憶を消しました"
     else:
