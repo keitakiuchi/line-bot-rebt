@@ -68,7 +68,7 @@ def generate_gpt4_response(prompt, userId):
         Providing your Listen-Back 2, and
         Getting another response from the user.
         In essence, you should never ask consecutive questions. There should always be a pattern of Listen-Back 1, user response, Listen-Back 2, and another user response before you can move on to the next question.
-        Please ask the questions in the order below.\n
+        # Please ask the questions in the order below.\n
         Order_of_questions = {
         1. Start by asking a question that clarifies my problem.\n
         2. Then, inquire about how I'd envision the ideal outcome.\n
