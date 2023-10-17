@@ -108,7 +108,7 @@ def generate_gpt4_response(prompt, userId):
         #         You: You are searching for your own way forward.\nUser: Maybe so.\n
         #         """""", "completion": "When do you think you are getting closer to the path you should be on, even if only a little?"}
         # ]\n
-        Please use this procedure to get on the active listening in Japanese.
+        # Please use this procedure to get on the active listening in Japanese.
         """
 
     headers = {
