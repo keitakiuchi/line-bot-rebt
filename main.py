@@ -202,7 +202,7 @@ def handle_line_message(event):
 
 # stripeの情報を参照
 def get_subscription_details_for_user(userId, STRIPE_PRICE_ID):
-    subscriptions = stripe.Subscription.list(limit=100)
+    subscriptions = stripe.Subscription.list(limit=100, metadata={"line_user": userId})
     for subscription in subscriptions.data:
         if subscription["items"]["data"][0]["price"]["id"] == STRIPE_PRICE_ID and subscription["metadata"].get("line_user") == userId:
             return {
@@ -265,7 +265,7 @@ if __name__ == "__main__":
     app.run(host="0.0.0.0", port=port)
 
 
-## データベース実装
+## 記憶の実装まで ##
 #####################################
 # from flask import Flask, request, abort
 # import os
@@ -382,6 +382,8 @@ if __name__ == "__main__":
 #         'messages': conversation_history,
 #         'temperature': 1
 #     }
+#     # ここでconversation_historyの内容をログに出力
+#     app.logger.info("Conversation history sent to OpenAI: " + str(conversation_history))
 
 #     try:
 #         response = requests.post(GPT4_API_URL, headers=headers, json=data)
@@ -415,43 +417,55 @@ if __name__ == "__main__":
 #         cursor.close()
 #         connection.close()
 
+# def deactivate_conversation_history(userId):
+#     connection = get_connection()
+#     cursor = connection.cursor()
+#     try:
+#         query = """
+#         UPDATE line_bot_logs SET is_active=FALSE 
+#         WHERE lineId=%s;
+#         """
+#         cursor.execute(query, (userId,))
+#         connection.commit()
+#     except Exception as e:
+#         print(f"Error: {e}")
+#         connection.rollback()
+#     finally:
+#         cursor.close()
+#         connection.close()
+
 # # LINEからのメッセージを処理し、必要に応じてStripeの情報も確認します。
 # @handler.add(MessageEvent, message=TextMessage)
 # def handle_line_message(event):
-#     # event.sourceオブジェクトの属性とその値をログに出力
-#     for attr in dir(event.source):
-#         logging.info(f"Attribute: {attr}, Value: {getattr(event.source, attr)}")
-
-#     # ユーザーからのイベントの場合、ユーザーIDを出力
 #     userId = getattr(event.source, 'user_id', None)
 
-#     # 現在のタイムスタンプを取得
-#     current_timestamp = datetime.datetime.now()
+#     if event.message.text == "キャンセル" and userId:
+#         deactivate_conversation_history(userId)
+#         reply_text = "記憶を消しました"
+#     else:
+#         # 現在のタイムスタンプを取得
+#         current_timestamp = datetime.datetime.now()
 
-#     # stripeIdを取得 (userIdが存在しない場合も考慮しています)
-#     stripe_id = None
-#     if userId:
-#         subscription_details = get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
-#         stripe_id = subscription_details['stripeId'] if subscription_details else None
-#         subscription_status = subscription_details['status'] if subscription_details else None
+#         if userId:
+#             subscription_details = get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
+#             stripe_id = subscription_details['stripeId'] if subscription_details else None
+#             subscription_status = subscription_details['status'] if subscription_details else None
 
-#         # LINEからのメッセージをログに保存
-#         log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text)
+#             log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, True)  # is_activeをTrueで保存
 
-#         # ステータスがactiveなら、利用回数の制限を気にせずに応答
-#         if subscription_status == "active":
-#             reply_text = generate_gpt4_response(event.message.text, userId)
-#         else:
-#             response_count = get_system_responses_in_last_24_hours(userId)
-#             if response_count < 2: 
+#             if subscription_status == "active":
 #                 reply_text = generate_gpt4_response(event.message.text, userId)
 #             else:
-#                 reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。"
-#     else:
-#         reply_text = "エラーが発生しました。"
+#                 response_count = get_system_responses_in_last_24_hours(userId)
+#                 if response_count < 2: 
+#                     reply_text = generate_gpt4_response(event.message.text, userId)
+#                 else:
+#                     reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。"
+#         else:
+#             reply_text = "エラーが発生しました。"
 
-#     # メッセージをログに保存
-#     log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text)
+#         # メッセージをログに保存
+#         log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text, True)  # is_activeをTrueで保存
 
 #     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
@@ -471,15 +485,15 @@ if __name__ == "__main__":
 #     return get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
 
 # # データをdbに入れる関数
-# def log_to_database(timestamp, sender, userId, stripeId, message):
+# def log_to_database(timestamp, sender, userId, stripeId, message, is_active=True):
 #     connection = get_connection()
 #     cursor = connection.cursor()
 #     try:
 #         query = """
-#         INSERT INTO line_bot_logs (timestamp, sender, lineId, stripeId, message) 
-#         VALUES (%s, %s, %s, %s, %s);
+#         INSERT INTO line_bot_logs (timestamp, sender, lineId, stripeId, message, is_active) 
+#         VALUES (%s, %s, %s, %s, %s, %s);
 #         """
-#         cursor.execute(query, (timestamp, sender, userId, stripeId, message))
+#         cursor.execute(query, (timestamp, sender, userId, stripeId, message, is_active))
 #         connection.commit()
 #     except Exception as e:
 #         print(f"Error: {e}")
@@ -497,10 +511,11 @@ if __name__ == "__main__":
 #     try:
 #         query = """
 #         SELECT sender, message FROM line_bot_logs 
-#         WHERE lineId=%s AND timestamp > NOW() - INTERVAL '12 HOURS' 
+#         WHERE lineId=%s AND is_active=TRUE 
 #         ORDER BY timestamp DESC LIMIT 5;
 #         """
 #         cursor.execute(query, (userId,))
+        
 #         results = cursor.fetchall()
 #         for result in results:
 #             role = 'user' if result[0] == 'user' else 'assistant'
@@ -510,14 +525,9 @@ if __name__ == "__main__":
 #     finally:
 #         cursor.close()
 #         connection.close()
-    
+
 #     # 最新の会話が最後に来るように反転
 #     return conversations[::-1]
-
-
-# if __name__ == "__main__":
-#     port = int(os.getenv("PORT", 5000))
-#     app.run(host="0.0.0.0", port=port)
 
 # if __name__ == "__main__":
 #     port = int(os.getenv("PORT", 5000))
