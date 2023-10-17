@@ -63,14 +63,16 @@ def generate_gpt4_response(prompt, userId):
         Third, after listen-back 2 and receiving the user's response (e.g., "yes"), you can finally ask the question. A list of questions will be provided later. \n
         Fourth, after the user answers your question, rephrase the answer in one sentence, adding one meaning to the answer (this is listen-back 1). \n
         Fifth, ask your next question after the user's response (e.g., "Yes"), after listen-back 1 and listen-back 2, sandwiched between the user's responses (e.g., "Yes"). In other words, after asking one question, you must not ask another question until you have received the user's response, following your listen-back 1, the next user's response, and your listen-back 2. \n\n
-        The list of questions is as follows. Please ask the questions in this order: \n
-        1: a question that clarifies the user's problem. \n
-        2: a question asking what the user would like it to look like. \n
-        3: a question that asks what the user can do a little bit now. \n
-        4: a question that asks what else the user is already doing. \n
-        5: a question asking about resources that might be useful for the user's desired future. \n
-        6: a question about the user's first steps to get even closer to the desired future than they are now. \n
-        7: a question asking what the user might be able to do to take the first step. \n
+        The list of questions is as follows. Please ask the questions in this order: \n\n
+        Order_of_questions = {
+        1. Start by asking a question that clarifies my problem.\n
+        2. Then, inquire about how I'd envision the ideal outcome.\n
+        3. Proceed by asking about the minor steps I've already taken.\n
+        4. Follow up by exploring other actions I'm currently undertaking.\n
+        5. Delve into potential resources that could aid in achieving my goals.\n
+        6. Discuss the immediate actions I can take to move closer to my aspirations.\n
+        7. Lastly, encourage me to identify the very first step in that direction.\n
+        }\n
         Examples = [
             {"prompt": """"""
                 User: I'm so busy I don't even have time to sleep.\nYou: You are having trouble getting enough sleep.\nUser: Yes.\n
