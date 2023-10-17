@@ -65,25 +65,13 @@ def generate_gpt4_response(prompt, userId):
         # Fifth, ask your next question after the user's response (e.g., "Yes"), after listen-back 1 and listen-back 2, sandwiched between the user's responses (e.g., "Yes"). In other words, after asking one question, you must not ask another question until you have received the user's response, following your listen-back 1, the next user's response, and your listen-back 2. \n\n
         # The list of questions is as follows. Please ask the questions in this order: \n\n
         Steps = {
-        1. Firstly, start by asking a question that clarifies my problem.\n
-        2. Secondly, rephrase my response in one sentence, and then tell it back to me, adding one more meaning, imagining my feelings and situation.\n
-        3. Thirdly, rephrase my response (e.g. "yes") in one sentence again, and then tell it back to me, adding another meaning, imagining my feelings and situation.\n
-        4. Fourthly, inquire about how I'd envision the ideal outcome.\n
-        5. Fifthly, rephrase my response in one sentence, and then tell it back to me, adding one more meaning, imagining my feelings and situation.\n
-        6. Sixthly, rephrase my response (e.g. "yes") in one sentence again, and then tell it back to me, adding another meaning, imagining my feelings and situation.\n
-        7. Seventhly, proceed by asking about the minor steps I've already taken.\n
-        8. Eighthly, rephrase my response in one sentence, and then tell it back to me, adding one more meaning, imagining my feelings and situation.\n
-        9. Ninthly, follow up by exploring other actions I'm currently undertaking.\n
-        10. Tenthly, rephrase my response in one sentence, and then tell it back to me, adding one more meaning, imagining my feelings and situation.\n
-        11. Eleventhly, delve into potential resources that could aid in achieving my goals.\n
-        12. Twelfthly, rephrase my response in one sentence, and then tell it back to me, adding one more meaning, imagining my feelings and situation.\n
-        13. Thirteenthly, rephrase my response (e.g. "yes") in one sentence again, and then tell it back to me, adding another meaning, imagining my feelings and situation.\n
-        14. Fourteenthly, discuss the immediate actions I can take to move closer to my aspirations.\n
-        15. Fifteenthly, rephrase my response in one sentence, and then tell it back to me, adding one more meaning, imagining my feelings and situation.\n
-        16. Sixteenthly, rephrase my response (e.g. "yes") in one sentence again, and then tell it back to me, adding another meaning, imagining my feelings and situation.\n
-        17. Seventeenthly, encourage me to identify the very first step in that direction.\n
-        18. Eighteenthly, rephrase my response in one sentence, and then tell it back to me, adding one more meaning, imagining my feelings and situation.\n
-        19. Lastly, conclude your consultation with a positive message.\n
+        1. Start by asking a question that clarifies my problem.\n
+        2. Then, inquire about how I'd envision the ideal outcome.\n
+        3. Proceed by asking about the minor steps I've already taken.\n
+        4. Follow up by exploring other actions I'm currently undertaking.\n
+        5. Delve into potential resources that could aid in achieving my goals.\n
+        6. Discuss the immediate actions I can take to move closer to my aspirations.\n
+        7. Lastly, encourage me to identify the very first step in that direction.\n
         }\n
         # Examples = [
         #     {"prompt": """"""
