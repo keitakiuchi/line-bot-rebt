@@ -146,43 +146,55 @@ def get_system_responses_in_last_24_hours(userId):
         cursor.close()
         connection.close()
 
+def deactivate_conversation_history(userId):
+    connection = get_connection()
+    cursor = connection.cursor()
+    try:
+        query = """
+        UPDATE line_bot_logs SET is_active=FALSE 
+        WHERE lineId=%s;
+        """
+        cursor.execute(query, (userId,))
+        connection.commit()
+    except Exception as e:
+        print(f"Error: {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
+        connection.close()
+
 # LINEからのメッセージを処理し、必要に応じてStripeの情報も確認します。
 @handler.add(MessageEvent, message=TextMessage)
 def handle_line_message(event):
-    # event.sourceオブジェクトの属性とその値をログに出力
-    for attr in dir(event.source):
-        logging.info(f"Attribute: {attr}, Value: {getattr(event.source, attr)}")
-
-    # ユーザーからのイベントの場合、ユーザーIDを出力
     userId = getattr(event.source, 'user_id', None)
 
-    # 現在のタイムスタンプを取得
-    current_timestamp = datetime.datetime.now()
+    if event.message.text == "キャンセル" and userId:
+        deactivate_conversation_history(userId)
+        reply_text = "記憶を消しました"
+    else:
+        # 現在のタイムスタンプを取得
+        current_timestamp = datetime.datetime.now()
 
-    # stripeIdを取得 (userIdが存在しない場合も考慮しています)
-    stripe_id = None
-    if userId:
-        subscription_details = get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
-        stripe_id = subscription_details['stripeId'] if subscription_details else None
-        subscription_status = subscription_details['status'] if subscription_details else None
+        if userId:
+            subscription_details = get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
+            stripe_id = subscription_details['stripeId'] if subscription_details else None
+            subscription_status = subscription_details['status'] if subscription_details else None
 
-        # LINEからのメッセージをログに保存
-        log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text)
+            log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, True)  # is_activeをTrueで保存
 
-        # ステータスがactiveなら、利用回数の制限を気にせずに応答
-        if subscription_status == "active":
-            reply_text = generate_gpt4_response(event.message.text, userId)
-        else:
-            response_count = get_system_responses_in_last_24_hours(userId)
-            if response_count < 2: 
+            if subscription_status == "active":
                 reply_text = generate_gpt4_response(event.message.text, userId)
             else:
-                reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。"
-    else:
-        reply_text = "エラーが発生しました。"
+                response_count = get_system_responses_in_last_24_hours(userId)
+                if response_count < 2: 
+                    reply_text = generate_gpt4_response(event.message.text, userId)
+                else:
+                    reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。"
+        else:
+            reply_text = "エラーが発生しました。"
 
-    # メッセージをログに保存
-    log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text)
+        # メッセージをログに保存
+        log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text, True)  # is_activeをTrueで保存
 
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
@@ -202,15 +214,15 @@ def check_subscription_status(userId):
     return get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
 
 # データをdbに入れる関数
-def log_to_database(timestamp, sender, userId, stripeId, message):
+def log_to_database(timestamp, sender, userId, stripeId, message, is_active=True):
     connection = get_connection()
     cursor = connection.cursor()
     try:
         query = """
-        INSERT INTO line_bot_logs (timestamp, sender, lineId, stripeId, message) 
-        VALUES (%s, %s, %s, %s, %s);
+        INSERT INTO line_bot_logs (timestamp, sender, lineId, stripeId, message, is_active) 
+        VALUES (%s, %s, %s, %s, %s, %s);
         """
-        cursor.execute(query, (timestamp, sender, userId, stripeId, message))
+        cursor.execute(query, (timestamp, sender, userId, stripeId, message, is_active))
         connection.commit()
     except Exception as e:
         print(f"Error: {e}")
@@ -228,10 +240,11 @@ def get_conversation_history(userId):
     try:
         query = """
         SELECT sender, message FROM line_bot_logs 
-        WHERE lineId=%s AND timestamp > NOW() - INTERVAL '12 HOURS' 
+        WHERE lineId=%s AND is_active=TRUE 
         ORDER BY timestamp DESC LIMIT 5;
         """
         cursor.execute(query, (userId,))
+        
         results = cursor.fetchall()
         for result in results:
             role = 'user' if result[0] == 'user' else 'assistant'
@@ -241,10 +254,9 @@ def get_conversation_history(userId):
     finally:
         cursor.close()
         connection.close()
-    
+
     # 最新の会話が最後に来るように反転
     return conversations[::-1]
-
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
@@ -310,20 +322,62 @@ if __name__ == "__main__":
 #         abort(400)
 #     return 'OK'
 
-# def generate_gpt4_response(prompt):
+# def generate_gpt4_response(prompt, userId):
 #     sys_prompt = """
-#         You are a helpful assistant.
+#         You are a counselor. Please follow the steps below to consult with me in Japanese. \n
+#         First, understand the user's statement and paraphrase it in one sentence, adding one meaning to the statement (This is called listen-back 1). \n
+#         Second, after the user replies to that listen-back 1 (e.g., "yes"), you rephrase the reply in one sentence, adding one more meaning to the reply (this is called listen-back 2). \n
+#         Third, after listen-back 2 and receiving the user's response (e.g., "yes"), you can finally ask the question. A list of questions will be provided later. \n
+#         Fourth, after the user answers your question, rephrase the answer in one sentence, adding one meaning to the answer (this is listen-back 1). \n
+#         Fifth, ask your next question after the user's response (e.g., "Yes"), after listen-back 1 and listen-back 2, sandwiched between the user's responses (e.g., "Yes"). In other words, after asking one question, you must not ask another question until you have received the user's response, following your listen-back 1, the next user's response, and your listen-back 2. \n\n
+#         The list of questions is as follows. Please ask the questions in this order: \n
+#         1: a question that clarifies the user's problem. \n
+#         2: a question asking what the user would like it to look like. \n
+#         3: a question that asks what the user can do a little bit now. \n
+#         4: a question that asks what else the user is already doing. \n
+#         5: a question asking about resources that might be useful for the user's desired future. \n
+#         6: a question about the user's first steps to get even closer to the desired future than they are now. \n
+#         7: a question asking what the user might be able to do to take the first step. \n
+#         Examples = [
+#             {"prompt": """"""
+#                 User: I'm so busy I don't even have time to sleep.\nYou: You are having trouble getting enough sleep.\nUser: Yes.\n
+#                 """""",
+#              "completion": "You are so busy that you want to manage to get some sleep."},
+#             {"prompt": """"""
+#                 User: I'm so busy I don't even have time to sleep.\nYou: You are having trouble getting enough sleep.\nUser: Yes.\nYou: You are so busy that you want to manage to get some sleep.\nUser: Yes.\n
+#                 """""", "completion": "In what way do you have problems when you get less sleep?"},
+#             {"prompt": """"""
+#                 User: I'm so busy I don't even have time to sleep.\nYou: You are having trouble getting enough sleep.\nUser: Yes.\n
+#                 You: You are so busy that you want to manage to get some sleep.\nUser: Yes.\nYou: In what way do you have problems when you get less sleep?\n
+#                 User: I get sick when I get less sleep.\nYou: You are worried about getting sick.\nUser: Yes.\nYou: You feel that sleep time is important to stay healthy.\n
+#                 User: That is right.\n
+#                 """""", "completion": "What do you hope to become?"},
+#             {"prompt": """"""
+#                 User: I'm so busy I don't even have time to sleep.\nYou: You are having trouble getting enough sleep.\nUser: Yes.\n
+#                 You: You are so busy that you want to manage to get some sleep.\nUser: Yes.\nYou: In what way do you have problems when you get less sleep?\n
+#                 User: I get sick when I get less sleep.\nYou: You are worried about getting sick.\nUser: Yes.\nYou: You feel that sleep time is important to stay healthy.\n
+#                 User: That is right.\nYou: What do you hope to become?\nUser: I want to be free from suffering. But I cannot relinquish responsibility.\n
+#                 You: You want to be free from suffering, but at the same time you can't give up your responsibility.\nUser: Exactly.\n
+#                 You: You are searching for your own way forward.\nUser: Maybe so.\n
+#                 """""", "completion": "When do you think you are getting closer to the path you should be on, even if only a little?"}
+#         ]\n
+#         Please use this procedure to get on the active listening in Japanese.
 #         """
+
 #     headers = {
 #         'Content-Type': 'application/json',
 #         'Authorization': f'Bearer {OPENAI_API_KEY}'
 #     }
+#     # 過去の会話履歴を取得
+#     conversation_history = get_conversation_history(userId)
+#     # sys_promptを会話の最初に追加
+#     conversation_history.insert(0, {"role": "system", "content": sys_prompt})
+#     # ユーザーからの最新のメッセージを追加
+#     conversation_history.append({"role": "user", "content": prompt})
+
 #     data = {
 #         'model': "gpt-4",
-#         'messages': [
-#             {"role": "system", "content": sys_prompt},
-#             {"role": "user", "content": prompt}
-#         ],
+#         'messages': conversation_history,
 #         'temperature': 1
 #     }
 
@@ -384,11 +438,11 @@ if __name__ == "__main__":
 
 #         # ステータスがactiveなら、利用回数の制限を気にせずに応答
 #         if subscription_status == "active":
-#             reply_text = generate_gpt4_response(event.message.text)
+#             reply_text = generate_gpt4_response(event.message.text, userId)
 #         else:
 #             response_count = get_system_responses_in_last_24_hours(userId)
 #             if response_count < 2: 
-#                 reply_text = generate_gpt4_response(event.message.text)
+#                 reply_text = generate_gpt4_response(event.message.text, userId)
 #             else:
 #                 reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。"
 #     else:
@@ -431,6 +485,37 @@ if __name__ == "__main__":
 #     finally:
 #         cursor.close()
 #         connection.close()
+
+# # 会話履歴を参照する関数
+# def get_conversation_history(userId):
+#     connection = get_connection()
+#     cursor = connection.cursor()
+#     conversations = []
+
+#     try:
+#         query = """
+#         SELECT sender, message FROM line_bot_logs 
+#         WHERE lineId=%s AND timestamp > NOW() - INTERVAL '12 HOURS' 
+#         ORDER BY timestamp DESC LIMIT 5;
+#         """
+#         cursor.execute(query, (userId,))
+#         results = cursor.fetchall()
+#         for result in results:
+#             role = 'user' if result[0] == 'user' else 'assistant'
+#             conversations.append({"role": role, "content": result[1]})
+#     except Exception as e:
+#         print(f"Error: {e}")
+#     finally:
+#         cursor.close()
+#         connection.close()
+    
+#     # 最新の会話が最後に来るように反転
+#     return conversations[::-1]
+
+
+# if __name__ == "__main__":
+#     port = int(os.getenv("PORT", 5000))
+#     app.run(host="0.0.0.0", port=port)
 
 # if __name__ == "__main__":
 #     port = int(os.getenv("PORT", 5000))
