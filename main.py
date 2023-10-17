@@ -190,7 +190,7 @@ def handle_line_message(event):
             stripe_id = subscription_details['stripeId'] if subscription_details else None
             subscription_status = subscription_details['status'] if subscription_details else None
 
-            log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, True)  # is_activeをTrueで保存
+            log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, True, sys_prompt)  # is_activeをTrueで保存
 
             if subscription_status == "active":
                 reply_text = generate_gpt4_response(event.message.text, userId)
@@ -204,7 +204,7 @@ def handle_line_message(event):
             reply_text = "エラーが発生しました。"
 
         # メッセージをログに保存
-        log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text, True)  # is_activeをTrueで保存
+        log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text, True, sys_prompt)  # is_activeをTrueで保存
 
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
