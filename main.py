@@ -113,6 +113,8 @@ def generate_gpt4_response(prompt, userId):
         'messages': conversation_history,
         'temperature': 1
     }
+    # ここでconversation_historyの内容をログに出力
+    app.logger.info("Conversation history sent to OpenAI: " + str(conversation_history))
 
     try:
         response = requests.post(GPT4_API_URL, headers=headers, json=data)
