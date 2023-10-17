@@ -202,7 +202,7 @@ def handle_line_message(event):
 
 # stripeの情報を参照
 def get_subscription_details_for_user(userId, STRIPE_PRICE_ID):
-    subscriptions = stripe.Subscription.list(limit=100, metadata={"line_user": userId})
+    subscriptions = stripe.Subscription.list(limit=100)
     for subscription in subscriptions.data:
         if subscription["items"]["data"][0]["price"]["id"] == STRIPE_PRICE_ID and subscription["metadata"].get("line_user") == userId:
             return {
