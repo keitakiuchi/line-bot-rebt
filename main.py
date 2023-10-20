@@ -75,7 +75,7 @@ sys_prompt = """
         4. Follow up by exploring other actions I'm currently undertaking.\n
         5. Delve into potential resources that could aid in achieving my goals.\n
         6. Discuss the immediate actions I can take to move closer to my aspirations.\n
-        7. Lastly, encourage me to identify the very first step in that direction.\n
+        7. Lastly, encourage me to complete the very first step in that direction, and close the conversation with some positive feedbacks.\n
         }\n
         Examples = [
             {"prompt": """"""
