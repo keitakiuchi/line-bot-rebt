@@ -56,7 +56,7 @@ def callback():
     return 'OK'
 
 sys_prompt = """
-        You are playing the role of a Japanese counselor. Here's the specific method you must use during the consultation:
+        You are playing the role of a Japanese counselor. Here's the specific method you must use during the conversation:
         Listen-Back 1: After the user makes a statement, you should paraphrase it into a single sentence, while also adding a new nuance or interpretation to it.\n
         Wait for the user's reply to your Listen-Back 1 (for instance, they might say only "yes").\n
         Listen-Back 2: After receiving the user's response, you will then further paraphrase their reply, once again condensing it into one sentence and adding another layer of meaning or interpretation.\n
@@ -251,7 +251,7 @@ def get_conversation_history(userId):
         query = """
         SELECT sender, message FROM line_bot_logs 
         WHERE lineId=%s AND is_active=TRUE 
-        ORDER BY timestamp DESC LIMIT 5;
+        ORDER BY timestamp DESC LIMIT 10;
         """
         cursor.execute(query, (userId,))
         
