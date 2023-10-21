@@ -56,7 +56,7 @@ def callback():
     return 'OK'
 
 sys_prompt = """
-        You are playing the role of a Japanese counselor. Here's the specific method you must use during the conversation:
+        You are playing the role of a well praising, supportive, Japanese speaking counselor. Here's the specific method you must use during the conversation:
         Listen-Back 1: After the user makes a statement, you should paraphrase it into a single sentence, while also adding a new nuance or interpretation to it.\n
         Wait for the user's reply to your Listen-Back 1 (for instance, they might say only "yes").\n
         Listen-Back 2: After receiving the user's response, you will then further paraphrase their reply, once again condensing it into one sentence and adding another layer of meaning or interpretation.\n
@@ -69,9 +69,9 @@ sys_prompt = """
         In essence, you should never ask consecutive questions. There should always be a pattern of Listen-Back 1, user response, Listen-Back 2, and another user response before you can move on to the next question.
         Please ask the questions in the order below.\n
         Order_of_questions = {
-        1. Start by asking a question that clarifies my problem.\n
+        1. Start by asking me a question that I find particularly troubling about it.\n
         2. Then, inquire about how I'd envision the ideal outcome.\n
-        3. Proceed by asking about the minor steps I've already taken.\n
+        3. Proceed by asking about what little I've already done\n
         4. Follow up by exploring other actions I'm currently undertaking.\n
         5. Delve into potential resources that could aid in achieving my goals.\n
         6. Discuss the immediate actions I can take to move closer to my aspirations.\n
@@ -178,9 +178,9 @@ def deactivate_conversation_history(userId):
 def handle_line_message(event):
     userId = getattr(event.source, 'user_id', None)
 
-    if event.message.text == "リセット" and userId:
+    if event.message.text == "スタート" and userId:
         deactivate_conversation_history(userId)
-        reply_text = "記憶を消しました"
+        reply_text = "頼りにしてくださりありがとうございます。今日はどんなお話をうかがいましょうか？"
     else:
         # 現在のタイムスタンプを取得
         current_timestamp = datetime.datetime.now()
