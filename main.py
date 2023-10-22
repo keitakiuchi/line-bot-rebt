@@ -196,10 +196,10 @@ def handle_line_message(event):
                 reply_text = generate_gpt4_response(event.message.text, userId)
             else:
                 response_count = get_system_responses_in_last_24_hours(userId)
-                if response_count < 2: 
+                if response_count < 5: 
                     reply_text = generate_gpt4_response(event.message.text, userId)
                 else:
-                    reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。"
+                    reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。有料アカウントへのお申し込みはこちらから：https://line-login-3fbeac7c6978.herokuapp.com/"
         else:
             reply_text = "エラーが発生しました。"
 
