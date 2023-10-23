@@ -48,7 +48,7 @@ def hello_world():
 def callback():
     signature = request.headers['X-Line-Signature']
     body = request.get_data(as_text=True)
-    app.logger.info("Request body: " + body)
+    # app.logger.info("Request body: " + body)
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
@@ -122,17 +122,17 @@ def generate_gpt4_response(prompt, userId):
         'temperature': 1
     }
     # ここでconversation_historyの内容をログに出力
-    app.logger.info("Conversation history sent to OpenAI: " + str(conversation_history))
+    # app.logger.info("Conversation history sent to OpenAI: " + str(conversation_history))
 
     try:
         response = requests.post(GPT4_API_URL, headers=headers, json=data)
         response.raise_for_status()  # Check if the request was successful
         response_json = response.json() # This line has been moved here
         # Add this line to log the response from OpenAI API
-        app.logger.info("Response from OpenAI API: " + str(response_json))
+        # app.logger.info("Response from OpenAI API: " + str(response_json))
         return response_json['choices'][0]['message']['content'].strip()
     except requests.RequestException as e:
-        app.logger.error(f"OpenAI API request failed: {e}")
+        # app.logger.error(f"OpenAI API request failed: {e}")
         return "Sorry, I couldn't understand that."
 
         
@@ -273,7 +273,7 @@ if __name__ == "__main__":
     app.run(host="0.0.0.0", port=port)
 
 
-## 記憶の実装まで ##
+## 旧 ##
 #####################################
 # from flask import Flask, request, abort
 # import os
@@ -332,48 +332,56 @@ if __name__ == "__main__":
 #         abort(400)
 #     return 'OK'
 
-# def generate_gpt4_response(prompt, userId):
-#     sys_prompt = """
-#         You are a counselor. Please follow the steps below to consult with me in Japanese. \n
-#         First, understand the user's statement and paraphrase it in one sentence, adding one meaning to the statement (This is called listen-back 1). \n
-#         Second, after the user replies to that listen-back 1 (e.g., "yes"), you rephrase the reply in one sentence, adding one more meaning to the reply (this is called listen-back 2). \n
-#         Third, after listen-back 2 and receiving the user's response (e.g., "yes"), you can finally ask the question. A list of questions will be provided later. \n
-#         Fourth, after the user answers your question, rephrase the answer in one sentence, adding one meaning to the answer (this is listen-back 1). \n
-#         Fifth, ask your next question after the user's response (e.g., "Yes"), after listen-back 1 and listen-back 2, sandwiched between the user's responses (e.g., "Yes"). In other words, after asking one question, you must not ask another question until you have received the user's response, following your listen-back 1, the next user's response, and your listen-back 2. \n\n
-#         The list of questions is as follows. Please ask the questions in this order: \n
-#         1: a question that clarifies the user's problem. \n
-#         2: a question asking what the user would like it to look like. \n
-#         3: a question that asks what the user can do a little bit now. \n
-#         4: a question that asks what else the user is already doing. \n
-#         5: a question asking about resources that might be useful for the user's desired future. \n
-#         6: a question about the user's first steps to get even closer to the desired future than they are now. \n
-#         7: a question asking what the user might be able to do to take the first step. \n
+# sys_prompt = """
+#         You are playing the role of a well praising, supportive, Japanese speaking counselor. Here's the specific method you must use during the conversation:
+#         Listen-Back 1: After the user makes a statement, you should paraphrase it into a single sentence, while also adding a new nuance or interpretation to it.\n
+#         Wait for the user's reply to your Listen-Back 1 (for instance, they might say only "yes").\n
+#         Listen-Back 2: After receiving the user's response, you will then further paraphrase their reply, once again condensing it into one sentence and adding another layer of meaning or interpretation.\n
+#         Once you've done Listen-Back 1 and Listen-Back 2 and received a response from the user, you may then pose a question. You will be given specific questions to ask later.\n
+#         After the user answers your question, return to Listen-Back 1 - paraphrase their answer in one sentence and introduce a new nuance or interpretation.\n
+#         You can ask your next question only after:
+#         Receiving a response to your Listen-Back 1,
+#         Providing your Listen-Back 2, and
+#         Getting another response from the user.
+#         In essence, you should never ask consecutive questions. There should always be a pattern of Listen-Back 1, user response, Listen-Back 2, and another user response before you can move on to the next question.
+#         Please ask the questions in the order below.\n
+#         Order_of_questions = {
+#         1: Start by asking me a question that I find particularly troubling about it.\n
+#         2: Then, inquire about how I'd envision the ideal outcome.\n
+#         3: Proceed by asking about what little I've already done\n
+#         4: Follow up by exploring other actions I'm currently undertaking.\n
+#         5: Delve into potential resources that could aid in achieving my goals.\n
+#         6: Discuss the immediate actions I can take to move closer to my aspirations.\n
+#         7: Lastly, encourage me to complete the very first step in that direction with some positive feedbacks, and asking if you can close the conversation.\n
+#         }\n
 #         Examples = [
 #             {"prompt": """"""
-#                 User: I'm so busy I don't even have time to sleep.\nYou: You are having trouble getting enough sleep.\nUser: Yes.\n
+#                 User: I'm so busy I don't even have time to sleep. \n
+#                 You: You are having trouble getting enough sleep. \n
+#                 User: Yes. \n
+#                 You: You are so busy that you want to manage to get some sleep. \n
+#                 User: Yes. \n
 #                 """""",
-#              "completion": "You are so busy that you want to manage to get some sleep."},
+#              "completion": "In what way do you have problems when you get less sleep?"},
 #             {"prompt": """"""
-#                 User: I'm so busy I don't even have time to sleep.\nYou: You are having trouble getting enough sleep.\nUser: Yes.\nYou: You are so busy that you want to manage to get some sleep.\nUser: Yes.\n
-#                 """""", "completion": "In what way do you have problems when you get less sleep?"},
-#             {"prompt": """"""
-#                 User: I'm so busy I don't even have time to sleep.\nYou: You are having trouble getting enough sleep.\nUser: Yes.\n
-#                 You: You are so busy that you want to manage to get some sleep.\nUser: Yes.\nYou: In what way do you have problems when you get less sleep?\n
-#                 User: I get sick when I get less sleep.\nYou: You are worried about getting sick.\nUser: Yes.\nYou: You feel that sleep time is important to stay healthy.\n
-#                 User: That is right.\n
+#                 User: I get sick when I get less sleep. \n
+#                 You: You are worried about getting sick. \n
+#                 User: Yes. \n
+#                 You: You feel that sleep time is important to stay healthy. \n
+#                 User: That is right. \n
 #                 """""", "completion": "What do you hope to become?"},
 #             {"prompt": """"""
-#                 User: I'm so busy I don't even have time to sleep.\nYou: You are having trouble getting enough sleep.\nUser: Yes.\n
-#                 You: You are so busy that you want to manage to get some sleep.\nUser: Yes.\nYou: In what way do you have problems when you get less sleep?\n
-#                 User: I get sick when I get less sleep.\nYou: You are worried about getting sick.\nUser: Yes.\nYou: You feel that sleep time is important to stay healthy.\n
-#                 User: That is right.\nYou: What do you hope to become?\nUser: I want to be free from suffering. But I cannot relinquish responsibility.\n
-#                 You: You want to be free from suffering, but at the same time you can't give up your responsibility.\nUser: Exactly.\n
-#                 You: You are searching for your own way forward.\nUser: Maybe so.\n
+#                 User: I want to be free from suffering. But I cannot relinquish responsibility. \n
+#                 You: You want to be free from suffering, but at the same time you can't give up your responsibility. \n
+#                 User: Exactly. \n
+#                 You: You are searching for your own way forward. \n
+#                 User: Maybe so. \n
 #                 """""", "completion": "When do you think you are getting closer to the path you should be on, even if only a little?"}
 #         ]\n
-#         Please use this procedure to get on the active listening in Japanese.
+#         Please follow the above procedures strictly for consultation.
 #         """
 
+# def generate_gpt4_response(prompt, userId):
 #     headers = {
 #         'Content-Type': 'application/json',
 #         'Authorization': f'Bearer {OPENAI_API_KEY}'
@@ -447,9 +455,9 @@ if __name__ == "__main__":
 # def handle_line_message(event):
 #     userId = getattr(event.source, 'user_id', None)
 
-#     if event.message.text == "キャンセル" and userId:
+#     if event.message.text == "スタート" and userId:
 #         deactivate_conversation_history(userId)
-#         reply_text = "記憶を消しました"
+#         reply_text = "頼りにしてくださりありがとうございます。今日はどんなお話をうかがいましょうか？"
 #     else:
 #         # 現在のタイムスタンプを取得
 #         current_timestamp = datetime.datetime.now()
@@ -459,21 +467,21 @@ if __name__ == "__main__":
 #             stripe_id = subscription_details['stripeId'] if subscription_details else None
 #             subscription_status = subscription_details['status'] if subscription_details else None
 
-#             log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, True)  # is_activeをTrueで保存
+#             log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, True, sys_prompt)  # is_activeをTrueで保存
 
 #             if subscription_status == "active":
 #                 reply_text = generate_gpt4_response(event.message.text, userId)
 #             else:
 #                 response_count = get_system_responses_in_last_24_hours(userId)
-#                 if response_count < 2: 
+#                 if response_count < 5: 
 #                     reply_text = generate_gpt4_response(event.message.text, userId)
 #                 else:
-#                     reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。"
+#                     reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。有料アカウントへのお申し込みはこちらから：https://line-login-3fbeac7c6978.herokuapp.com/"
 #         else:
 #             reply_text = "エラーが発生しました。"
 
 #         # メッセージをログに保存
-#         log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text, True)  # is_activeをTrueで保存
+#         log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text, True, sys_prompt)  # is_activeをTrueで保存
 
 #     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
@@ -493,15 +501,15 @@ if __name__ == "__main__":
 #     return get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
 
 # # データをdbに入れる関数
-# def log_to_database(timestamp, sender, userId, stripeId, message, is_active=True):
+# def log_to_database(timestamp, sender, userId, stripeId, message, is_active=True, sys_prompt=''):
 #     connection = get_connection()
 #     cursor = connection.cursor()
 #     try:
 #         query = """
-#         INSERT INTO line_bot_logs (timestamp, sender, lineId, stripeId, message, is_active) 
-#         VALUES (%s, %s, %s, %s, %s, %s);
+#         INSERT INTO line_bot_logs (timestamp, sender, lineId, stripeId, message, is_active, sys_prompt) 
+#         VALUES (%s, %s, %s, %s, %s, %s, %s);
 #         """
-#         cursor.execute(query, (timestamp, sender, userId, stripeId, message, is_active))
+#         cursor.execute(query, (timestamp, sender, userId, stripeId, message, is_active, sys_prompt))
 #         connection.commit()
 #     except Exception as e:
 #         print(f"Error: {e}")
@@ -520,7 +528,7 @@ if __name__ == "__main__":
 #         query = """
 #         SELECT sender, message FROM line_bot_logs 
 #         WHERE lineId=%s AND is_active=TRUE 
-#         ORDER BY timestamp DESC LIMIT 5;
+#         ORDER BY timestamp DESC LIMIT 10;
 #         """
 #         cursor.execute(query, (userId,))
         
