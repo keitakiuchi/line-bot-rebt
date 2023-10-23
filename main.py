@@ -192,14 +192,14 @@ def handle_line_message(event):
 
             log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, True, sys_prompt)  # is_activeをTrueで保存
 
-            if subscription_status == "negative": ####################本番はactive################
+            if subscription_status == "active": ####################本番はactive################
                 reply_text = generate_gpt4_response(event.message.text, userId)
             else:
                 response_count = get_system_responses_in_last_24_hours(userId)
                 if response_count < 5: 
                     reply_text = generate_gpt4_response(event.message.text, userId)
                 else:
-                    reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。有料アカウントへのお申し込みはこちらから：https://line-login-3fbeac7c6978.herokuapp.com/"
+                    reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。こちらから回数無制限の有料プランに申し込むこともできます：https://line-login-3fbeac7c6978.herokuapp.com/"
         else:
             reply_text = "エラーが発生しました。"
 
