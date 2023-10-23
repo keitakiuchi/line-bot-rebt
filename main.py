@@ -192,7 +192,7 @@ def handle_line_message(event):
 
             log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, True, sys_prompt)  # is_activeをTrueで保存
 
-            if subscription_status == "active":
+            if subscription_status == "negative": ####################本番はactive################
                 reply_text = generate_gpt4_response(event.message.text, userId)
             else:
                 response_count = get_system_responses_in_last_24_hours(userId)
