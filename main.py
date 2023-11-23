@@ -107,7 +107,7 @@ sys_prompt = """
 def generate_gpt4_response(prompt, userId):
     headers = {
         'Content-Type': 'application/json',
-        'Authorization': f'Bearer {OPENAI_API_KEY}'
+        'Authorization': f'Bearer {_API_KEY}'
     }
     # 過去の会話履歴を取得
     conversation_history = get_conversation_history(userId)
@@ -117,22 +117,22 @@ def generate_gpt4_response(prompt, userId):
     conversation_history.append({"role": "user", "content": prompt})
 
     data = {
-        'model': "gpt-4",
+        'model': "gpt-4-1106-preview",
         'messages': conversation_history,
         'temperature': 1
     }
     # ここでconversation_historyの内容をログに出力
-    # app.logger.info("Conversation history sent to OpenAI: " + str(conversation_history))
+    # app.logger.info("Conversation history sent to : " + str(conversation_history))
 
     try:
         response = requests.post(GPT4_API_URL, headers=headers, json=data)
         response.raise_for_status()  # Check if the request was successful
         response_json = response.json() # This line has been moved here
-        # Add this line to log the response from OpenAI API
-        # app.logger.info("Response from OpenAI API: " + str(response_json))
+        # Add this line to log the response from  API
+        # app.logger.info("Response from  API: " + str(response_json))
         return response_json['choices'][0]['message']['content'].strip()
     except requests.RequestException as e:
-        # app.logger.error(f"OpenAI API request failed: {e}")
+        # app.logger.error(f" API request failed: {e}")
         return "Sorry, I couldn't understand that."
 
         
@@ -302,7 +302,7 @@ if __name__ == "__main__":
 # line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
 # handler = WebhookHandler(YOUR_CHANNEL_SECRET)
 
-# OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+# _API_KEY = os.environ["OPENAI_API_KEY"]
 # GPT4_API_URL = 'https://api.openai.com/v1/chat/completions'
 
 # stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
@@ -325,7 +325,7 @@ if __name__ == "__main__":
 # def callback():
 #     signature = request.headers['X-Line-Signature']
 #     body = request.get_data(as_text=True)
-#     app.logger.info("Request body: " + body)
+#     # app.logger.info("Request body: " + body)
 #     try:
 #         handler.handle(body, signature)
 #     except InvalidSignatureError:
@@ -399,17 +399,17 @@ if __name__ == "__main__":
 #         'temperature': 1
 #     }
 #     # ここでconversation_historyの内容をログに出力
-#     app.logger.info("Conversation history sent to OpenAI: " + str(conversation_history))
+#     # app.logger.info("Conversation history sent to OpenAI: " + str(conversation_history))
 
 #     try:
 #         response = requests.post(GPT4_API_URL, headers=headers, json=data)
 #         response.raise_for_status()  # Check if the request was successful
 #         response_json = response.json() # This line has been moved here
 #         # Add this line to log the response from OpenAI API
-#         app.logger.info("Response from OpenAI API: " + str(response_json))
+#         # app.logger.info("Response from OpenAI API: " + str(response_json))
 #         return response_json['choices'][0]['message']['content'].strip()
 #     except requests.RequestException as e:
-#         app.logger.error(f"OpenAI API request failed: {e}")
+#         # app.logger.error(f"OpenAI API request failed: {e}")
 #         return "Sorry, I couldn't understand that."
 
         
@@ -469,14 +469,14 @@ if __name__ == "__main__":
 
 #             log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, True, sys_prompt)  # is_activeをTrueで保存
 
-#             if subscription_status == "active":
+#             if subscription_status == "active": ####################本番はactive################
 #                 reply_text = generate_gpt4_response(event.message.text, userId)
 #             else:
 #                 response_count = get_system_responses_in_last_24_hours(userId)
 #                 if response_count < 5: 
 #                     reply_text = generate_gpt4_response(event.message.text, userId)
 #                 else:
-#                     reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。有料アカウントへのお申し込みはこちらから：https://line-login-3fbeac7c6978.herokuapp.com/"
+#                     reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。こちらから回数無制限の有料プランに申し込むこともできます：https://line-login-3fbeac7c6978.herokuapp.com/"
 #         else:
 #             reply_text = "エラーが発生しました。"
 
