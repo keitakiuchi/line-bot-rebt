@@ -107,7 +107,7 @@ sys_prompt = """
 def generate_gpt4_response(prompt, userId):
     headers = {
         'Content-Type': 'application/json',
-        'Authorization': f'Bearer {_API_KEY}'
+        'Authorization': f'Bearer {OPENAI_API_KEY}'
     }
     # 過去の会話履歴を取得
     conversation_history = get_conversation_history(userId)
@@ -302,7 +302,7 @@ if __name__ == "__main__":
 # line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
 # handler = WebhookHandler(YOUR_CHANNEL_SECRET)
 
-# _API_KEY = os.environ["OPENAI_API_KEY"]
+# OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 # GPT4_API_URL = 'https://api.openai.com/v1/chat/completions'
 
 # stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
