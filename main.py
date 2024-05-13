@@ -117,12 +117,13 @@ def generate_gpt4_response(prompt, userId):
     conversation_history.append({"role": "user", "content": prompt})
 
     data = {
-        'model': "gpt-4-1106-preview",
+        'model': "gpt-4o",
         'messages': conversation_history,
         'temperature': 1
     }
     # ここでconversation_historyの内容をログに出力
     # app.logger.info("Conversation history sent to : " + str(conversation_history))
+    # 旧："gpt-4-1106-preview"
 
     try:
         response = requests.post(GPT4_API_URL, headers=headers, json=data)
