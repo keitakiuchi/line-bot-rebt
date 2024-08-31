@@ -64,7 +64,8 @@ def generate_claude_response(prompt, userId):
     conversation_history = get_conversation_history(userId)
     
     # システムプロンプトを追加
-    full_prompt = f"{sys_prompt}\n\n"
+    full_prompt = f"{sys_prompt.format(CONVERSATION_HISTORY=''.join([f'Human: {message["content"]}\n\n' for message in conversation_history if message["role"] == "user"]),
+                                       QUESTION=prompt)}\n\n"
     
     # 会話履歴を追加
     for message in conversation_history:
