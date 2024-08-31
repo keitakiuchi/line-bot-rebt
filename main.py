@@ -62,8 +62,10 @@ sys_prompt = "You will be playing the role of a supportive, Japanese-speaking co
 def generate_claude_response(prompt, userId):
     # 過去の会話履歴を取得
     conversation_history = get_conversation_history(userId)
+    
     # sys_promptを会話の最初に追加
     conversation_history.insert(0, {"role": "system", "content": sys_prompt})
+    
     # ユーザーからの最新のメッセージを追加
     conversation_history.append({"role": "user", "content": prompt})
     
