@@ -64,14 +64,14 @@ def generate_claude_response(prompt, userId):
     conversation_history = get_conversation_history(userId)
     
     # sys_promptを会話の最初に追加
-    conversation_history.insert(0, {"role": "system", "content": sys_prompt})
+    conversation_history.insert(0, {"role": "assistant", "content": sys_prompt})
     
     # ユーザーからの最新のメッセージを追加
     conversation_history.append({"role": "user", "content": prompt})
     
     try:
         response = anthropic_client.completions.create(
-            model="claude-2",
+            model="claude-3-haiku-20240307",
             messages=conversation_history,
             max_tokens_to_sample=300,
             temperature=1
