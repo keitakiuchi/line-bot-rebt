@@ -62,25 +62,15 @@ sys_prompt = "You will be playing the role of a supportive, Japanese-speaking co
 def generate_claude_response(prompt, userId):
     # 過去の会話履歴を取得
     conversation_history = get_conversation_history(userId)
+    # sys_promptを会話の最初に追加
+    conversation_history.insert(0, {"role": "system", "content": sys_prompt})
+    # ユーザーからの最新のメッセージを追加
+    conversation_history.append({"role": "user", "content": prompt})
     
-    # システムプロンプトを追加
-    full_prompt = f"{sys_prompt.format(CONVERSATION_HISTORY=''.join([f'Human: {message[\"content\"]}\n\n' for message in conversation_history if message[\"role\"] == \"user\"]),
-                                       QUESTION=prompt)}\n\n"
-    
-    # 会話履歴を追加
-    for message in conversation_history:
-        if message["role"] == "user":
-            full_prompt += f"Human: {message['content']}\n\n"
-        else:
-            full_prompt += f"Assistant: {message['content']}\n\n"
-    
-    # 新しいプロンプトを追加
-    full_prompt += f"Human: {prompt}\n\nAssistant:"
-
     try:
         response = anthropic_client.completions.create(
             model="claude-2",
-            prompt=full_prompt,
+            messages=conversation_history,
             max_tokens_to_sample=300,
             temperature=1
         )
