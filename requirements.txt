@@ -5,3 +5,4 @@ openai
 aiohttp==3.8.6
 stripe
 psycopg2-binary
+anthropic
