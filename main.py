@@ -63,23 +63,25 @@ def generate_claude_response(prompt, userId):
     # 過去の会話履歴を取得
     conversation_history = get_conversation_history(userId)
     
-    # 会話履歴をAnthropicの形式に変換
-    formatted_history = ""
+    # システムプロンプトを追加
+    full_prompt = f"{sys_prompt}\n\n"
+    
+    # 会話履歴を追加
     for message in conversation_history:
         if message["role"] == "user":
-            formatted_history += f"{HUMAN_PROMPT} {message['content']}\n\n"
+            full_prompt += f"Human: {message['content']}\n\n"
         else:
-            formatted_history += f"{AI_PROMPT} {message['content']}\n\n"
+            full_prompt += f"Assistant: {message['content']}\n\n"
     
     # 新しいプロンプトを追加
-    full_prompt = f"{sys_prompt}\n\n{formatted_history}{HUMAN_PROMPT} {prompt}\n\n{AI_PROMPT}"
+    full_prompt += f"Human: {prompt}\n\nAssistant:"
 
     try:
-        response = anthropic_client.messages.create(
-            model="claude-3-haiku-20240307",
+        response = anthropic_client.completions.create(
+            model="claude-2",
+            prompt=full_prompt,
             max_tokens_to_sample=300,
-            temperature=1,
-            messages=full_prompt,
+            temperature=1
         )
         return response.completion.strip()
     except Exception as e:
