@@ -215,8 +215,11 @@ def generate_claude_response(prompt, userId):
     config = {}  # 初期の空のconfigを作成
     # configを修正
     config = _per_request_config_modifier(config, userId)
+    input ={
+        "input": prompt
+    }
     try:
-        response = full_chain.invoke(prompt, config)
+        response = full_chain.invoke(input, config)
         response.raise_for_status()  # Check if the request was successful
         response_json = response.json() # This line has been moved here
         # Add this line to log the response from  API
