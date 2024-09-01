@@ -6,3 +6,7 @@ aiohttp==3.8.6
 stripe
 psycopg2-binary
 anthropic
+langchain
+langchain_core
+langchain_openai
+fastapi
