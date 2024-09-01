@@ -8,5 +8,6 @@ psycopg2-binary
 anthropic
 langchain
 langchain_core
+langchain-community
 langchain_openai
 fastapi
