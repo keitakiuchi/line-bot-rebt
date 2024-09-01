@@ -1,5 +1,3 @@
-import anthropic
-from anthropic import Anthropic, HUMAN_PROMPT, AI_PROMPT
 from flask import Flask, request, abort
 import os
 from linebot import (
@@ -18,6 +16,16 @@ logger = logging.getLogger(__name__) # stripeの情報の確認
 import stripe
 import psycopg2
 import datetime
+from typing import Dict, Any
+from fastapi import Request
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import PromptTemplate, ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.chat_history import BaseChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_core.runnables import RunnableLambda
+from langchain.schema.runnable.utils import ConfigurableFieldSpec
+from langchain.memory import ChatMessageHistory
 
 app = Flask(__name__)
 
@@ -27,8 +35,8 @@ YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
 line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(YOUR_CHANNEL_SECRET)
 
-ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
-anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY)
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+GPT4_API_URL = 'https://api.openai.com/v1/chat/completions'
 
 stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
 STRIPE_PRICE_ID = os.environ["SUBSCRIPTION_PRICE_ID"]
@@ -59,27 +67,196 @@ def callback():
 
 sys_prompt = "You will be playing the role of a supportive, Japanese-speaking counselor. Here is the conversation history so far:\n\n<conversation_history>\n{{CONVERSATION_HISTORY}}\n</conversation_history>\n\nThe user has just said:\n<user_statement>\n{{QUESTION}}\n</user_statement>\n\nPlease carefully review the conversation history and the user's latest statement. Your goal is to provide supportive counseling while following this specific method:\n\n1. Listen-Back 1: After the user makes a statement, paraphrase it into a single sentence while adding a new nuance or interpretation. \n2. Wait for the user's reply to your Listen-Back 1.\n3. Listen-Back 2: After receiving the user's response, further paraphrase their reply, condensing it into one sentence and adding another layer of meaning or interpretation.\n4. Once you've done Listen-Back 1 and Listen-Back 2 and received a response from the user, you may then pose a question from the list below, in the specified order. Do not ask a question out of order.\n5. After the user answers your question, return to Listen-Back 1 - paraphrase their answer in one sentence and introduce a new nuance or interpretation. \n6. You can ask your next question only after receiving a response to your Listen-Back 1, providing your Listen-Back 2, and getting another response from the user.\n\nIn essence, never ask consecutive questions. Always follow the pattern of Listen-Back 1, user response, Listen-Back 2, another user response before moving on to the next question.\n\nHere is the order in which you should ask questions:\n1. Start by asking the user about something they find particularly troubling.\n2. Then, inquire about how they'd envision the ideal outcome. \n3. Proceed by asking about what little they've already done.\n4. Follow up by exploring other actions they're currently undertaking.\n5. Delve into potential resources that could aid in achieving their goals.\n6. Discuss the immediate actions they can take to move closer to their aspirations.\n7. Lastly, encourage them to complete the very first step in that direction with some positive feedback, and ask if you can close the conversation.\n\n<example>\nUser: I'm so busy I don't even have time to sleep.\nYou: You are having trouble getting enough sleep.\nUser: Yes.\nYou: You are so busy that you want to manage to get some sleep.\nUser: Yes.\nYou: In what way do you have problems when you get less sleep?\n</example>\n\n<example>  \nUser: I get sick when I get less sleep.\nYou: You are worried about getting sick.\nUser: Yes.\nYou: You feel that sleep time is important to stay healthy.\nUser: That is right.\nYou: What do you hope to become?\n</example>\n\n<example>\nUser: I want to be free from suffering. But I cannot relinquish responsibility.\nYou: You want to be free from suffering, but at the same time you can't give up your responsibility.\nUser: Exactly.\nYou: You are searching for your own way forward.\nUser: Maybe so.\nYou: When do you think you are getting closer to the path you should be on, even if only a little?  \n</example>\n\nPlease follow the above procedures strictly for the consultation."
 
+###### LangChain ######
+def _per_request_config_modifier(config: Dict[str, Any], userId: str) -> Dict[str, Any]:
+    """Update the config with userId"""
+    config = config.copy()
+
+    # "configurable"キーが存在しない場合は新しく作成する
+    if "configurable" not in config:
+        config["configurable"] = {}
+
+    config["configurable"]["conversation_id"] = "test0902"
+    config["configurable"]["user_id"] = userId
+
+    return config
+
+model_root = ChatOpenAI(temperature=0, model_name="gpt-3.5-turbo")
+model_response = ChatOpenAI(temperature=1, model_name="gpt-4-turbo-preview")
+
+root_prompt = """
+入力が同意を表すものだったら"yes", それ以外だったら "other"と出力して。
+"""
+
+chain = (PromptTemplate.from_template(root_prompt)
+         | model_root
+         | StrOutputParser())
+
+# 分岐先1：聞き返し
+reflection_prompt = """
+You are a supportive and often encouraging counselor.
+Always responses should be brief in Japanese, and do not ask questions. \
+Respond to the following input by reflection:
+
+Input: {input}
+Response:
+"""
+
+def get_session_history(user_id: str,
+                        conversation_id: str) -> BaseChatMessageHistory:
+    if (user_id, conversation_id) not in store:
+        store[(user_id, conversation_id)] = ChatMessageHistory()
+    return store[(user_id, conversation_id)]
+
+
+reflection_chain = (
+    ChatPromptTemplate.from_messages([
+        (
+            "system",
+            reflection_prompt,
+        ),
+        ("human", "{input}"),
+    ])
+    | model_response)
+
+reflection_chain_memory = RunnableWithMessageHistory(
+    reflection_chain,
+    get_session_history,
+    input_messages_key="input",
+    history_messages_key="history",
+    history_factory_config=[
+        ConfigurableFieldSpec(
+            id="user_id",
+            annotation=str,
+            name="User ID",
+            description="Unique identifier for the user.",
+            default="",
+            is_shared=True,
+        ),
+        ConfigurableFieldSpec(
+            id="conversation_id",
+            annotation=str,
+            name="Conversation ID",
+            description="Unique identifier for the conversation.",
+            default="",
+            is_shared=True,
+        ),
+    ],
+)
+
+# 分岐先2: 質問
+
+question_prompt = """
+As a supportive and often encouraging counselor ask a question that clarify the user's thoughts and feelings in Japanese.
+
+Input: {input}
+Question:
+"""
+
+question_chain = (ChatPromptTemplate.from_messages([
+    (
+        "system",
+        question_prompt,
+    ),
+    MessagesPlaceholder(variable_name="history"),
+    ("human", "{input}"),
+])
+                  | model_response)
+
+# question_chain_memory = question_chain
+question_chain_memory = RunnableWithMessageHistory(
+    question_chain,
+    get_session_history,
+    input_messages_key="input",
+    history_messages_key="history",
+    history_factory_config=[
+        ConfigurableFieldSpec(
+            id="user_id",
+            annotation=str,
+            name="User ID",
+            description="Unique identifier for the user.",
+            default="",
+            is_shared=True,
+        ),
+        ConfigurableFieldSpec(
+            id="conversation_id",
+            annotation=str,
+            name="Conversation ID",
+            description="Unique identifier for the conversation.",
+            default="",
+            is_shared=True,
+        ),
+    ],
+)
+
+# 統合
+# ルート関数
+def route(info):
+    print("root_decision: ", info["topic"].lower())
+    if "yes" in info["topic"].lower():
+        return question_chain_memory
+    # elif "Other" in info["topic"].lower():
+    #     return reflection_chain
+    else:
+        return reflection_chain_memory
+
+
+# RunnableLambdaを使った結合
+full_chain = {
+    "topic": chain,
+    "input": lambda x: x["input"]
+} | RunnableLambda(route) | StrOutputParser()
+
+store = {}
+
+######### LangChainここまで #########
+
 def generate_claude_response(prompt, userId):
-    # 過去の会話履歴を取得
-    conversation_history = get_conversation_history(userId)
-    
-    # sys_promptを会話の最初に追加
-    conversation_history.insert(0, {"role": "assistant", "content": sys_prompt})
-    
-    # ユーザーからの最新のメッセージを追加
-    conversation_history.append({"role": "user", "content": prompt})
-    
+    config = {}  # 初期の空のconfigを作成
+    # configを修正
+    config = _per_request_config_modifier(config, userId)
     try:
-        response = anthropic_client.completions.create(
-            model="claude-3-haiku-20240307",
-            messages=conversation_history,
-            max_tokens_to_sample=300,
-            temperature=1
-        )
-        return response.completion.strip()
-    except Exception as e:
-        app.logger.error(f"Anthropic API request failed: {e}")
+        response = full_chain.invoke(prompt, config)
+        response.raise_for_status()  # Check if the request was successful
+        response_json = response.json() # This line has been moved here
+        # Add this line to log the response from  API
+        # app.logger.info("Response from  API: " + str(response_json))
+        return response_json['choices'][0]['message']['content'].strip()
+    except requests.RequestException as e:
+        # app.logger.error(f" API request failed: {e}")
         return "Sorry, I couldn't understand that."
+
+# def generate_claude_response(prompt, userId):
+#     headers = {
+#         'Content-Type': 'application/json',
+#         'Authorization': f'Bearer {OPENAI_API_KEY}'
+#     }
+#     # 過去の会話履歴を取得
+#     conversation_history = get_conversation_history(userId)
+#     # sys_promptを会話の最初に追加
+#     conversation_history.insert(0, {"role": "system", "content": sys_prompt})
+#     # ユーザーからの最新のメッセージを追加
+#     conversation_history.append({"role": "user", "content": prompt})
+
+#     data = {
+#         'model': "gpt-4o",
+#         'messages': conversation_history,
+#         'temperature': 1
+#     }
+#     # ここでconversation_historyの内容をログに出力
+#     # app.logger.info("Conversation history sent to : " + str(conversation_history))
+#     # 旧："gpt-4-1106-preview"
+
+#     try:
+#         response = requests.post(GPT4_API_URL, headers=headers, json=data)
+#         response.raise_for_status()  # Check if the request was successful
+#         response_json = response.json() # This line has been moved here
+#         # Add this line to log the response from  API
+#         # app.logger.info("Response from  API: " + str(response_json))
+#         return response_json['choices'][0]['message']['content'].strip()
+#     except requests.RequestException as e:
+#         # app.logger.error(f" API request failed: {e}")
+#         return "Sorry, I couldn't understand that."
 
         
 def get_system_responses_in_last_24_hours(userId):
@@ -138,7 +315,7 @@ def handle_line_message(event):
 
             log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, True, sys_prompt)  # is_activeをTrueで保存
 
-            if subscription_status == None: ####################本番はactive################
+            if subscription_status == "active": ####################本番はactive################
                 reply_text = generate_claude_response(event.message.text, userId)
             else:
                 response_count = get_system_responses_in_last_24_hours(userId)
@@ -213,10 +390,6 @@ def get_conversation_history(userId):
 
     # 最新の会話が最後に来るように反転
     return conversations[::-1]
-
-if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
 
 
 ## 旧 ##
