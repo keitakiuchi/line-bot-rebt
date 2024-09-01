@@ -220,11 +220,12 @@ def generate_claude_response(prompt, userId):
     }
     try:
         response = full_chain.invoke(input, config)
-        response.raise_for_status()  # Check if the request was successful
-        response_json = response.json() # This line has been moved here
-        # Add this line to log the response from  API
-        # app.logger.info("Response from  API: " + str(response_json))
-        return response_json['choices'][0]['message']['content'].strip()
+        # response.raise_for_status()  # Check if the request was successful
+        # response_json = response.json() # This line has been moved here
+        # # Add this line to log the response from  API
+        # # app.logger.info("Response from  API: " + str(response_json))
+        # return response_json['choices'][0]['message']['content'].strip()
+        return response
     except requests.RequestException as e:
         # app.logger.error(f" API request failed: {e}")
         return "Sorry, I couldn't understand that."
