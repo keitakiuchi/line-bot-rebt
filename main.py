@@ -86,11 +86,10 @@ def _per_request_config_modifier(config: Dict[str, Any], userId: str) -> Dict[st
     if "configurable" not in config:
         config["configurable"] = {}
 
-    # Lineidをconversation_idとして扱う
-    config["configurable"]["conversation_id"] = userId
     config["configurable"]["user_id"] = userId
 
     return config
+
 # def _per_request_config_modifier(config: Dict[str, Any], userId: str) -> Dict[str, Any]:
 #     """Update the config with userId"""
 #     config = config.copy()
@@ -118,11 +117,11 @@ def get_session_history(user_id: str) -> BaseChatMessageHistory:
     with psycopg2.connect(**db_config, cursor_factory=RealDictCursor) as conn:
         with conn.cursor() as cur:
             cur.execute('SELECT * FROM line_bot_logs WHERE Lineid = %s ORDER BY Timestamp ASC', 
-                        (user_id))
+                        (user_id,))
             rows = cur.fetchall()
             chat_history = ChatMessageHistory()
             for row in rows:
-                chat_history.add_message(role=row['sender'], content=row['message'])
+                chat_history.add_message(role=row['sender'], content=row['Message'])
             return chat_history
             
 # def get_session_history(user_id: str,
@@ -258,7 +257,8 @@ def generate_claude_response(prompt, userId):
     # configを修正
     config = _per_request_config_modifier(config, userId)
     input = {
-        "input": prompt
+        "input": prompt,
+        "user_id": userId  # user_idのみを使用
     }
     try:
         response = full_chain.invoke(input, config)
