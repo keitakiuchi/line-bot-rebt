@@ -83,14 +83,26 @@ def _per_request_config_modifier(config: Dict[str, Any], userId: str) -> Dict[st
     """Update the config with userId"""
     config = config.copy()
 
-    # "configurable"キーが存在しない場合は新しく作成する
     if "configurable" not in config:
         config["configurable"] = {}
 
-    config["configurable"]["conversation_id"] = "test0902"
+    # Lineidをconversation_idとして扱う
+    config["configurable"]["conversation_id"] = userId
     config["configurable"]["user_id"] = userId
 
     return config
+# def _per_request_config_modifier(config: Dict[str, Any], userId: str) -> Dict[str, Any]:
+#     """Update the config with userId"""
+#     config = config.copy()
+
+#     # "configurable"キーが存在しない場合は新しく作成する
+#     if "configurable" not in config:
+#         config["configurable"] = {}
+
+#     config["configurable"]["conversation_id"] = "test0902"
+#     config["configurable"]["user_id"] = userId
+
+#     return config
 
 # PostgreSQLの設定
 db_config = {
@@ -241,25 +253,38 @@ full_chain = {
 store = {}
 
 ######### LangChainここまで #########
-
 def generate_claude_response(prompt, userId):
     config = {}  # 初期の空のconfigを作成
     # configを修正
     config = _per_request_config_modifier(config, userId)
-    input ={
+    input = {
         "input": prompt
     }
     try:
         response = full_chain.invoke(input, config)
-        # response.raise_for_status()  # Check if the request was successful
-        # response_json = response.json() # This line has been moved here
-        # # Add this line to log the response from  API
-        # # app.logger.info("Response from  API: " + str(response_json))
-        # return response_json['choices'][0]['message']['content'].strip()
         return response
     except requests.RequestException as e:
-        # app.logger.error(f" API request failed: {e}")
         return "Sorry, I couldn't understand that."
+
+## 一次メモリ版
+# def generate_claude_response(prompt, userId):
+#     config = {}  # 初期の空のconfigを作成
+#     # configを修正
+#     config = _per_request_config_modifier(config, userId)
+#     input ={
+#         "input": prompt
+#     }
+#     try:
+#         response = full_chain.invoke(input, config)
+#         # response.raise_for_status()  # Check if the request was successful
+#         # response_json = response.json() # This line has been moved here
+#         # # Add this line to log the response from  API
+#         # # app.logger.info("Response from  API: " + str(response_json))
+#         # return response_json['choices'][0]['message']['content'].strip()
+#         return response
+#     except requests.RequestException as e:
+#         # app.logger.error(f" API request failed: {e}")
+#         return "Sorry, I couldn't understand that."
 
 # def generate_claude_response(prompt, userId):
 #     headers = {
