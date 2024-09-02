@@ -125,7 +125,7 @@ def get_session_history(user_id: str, conversation_id: str = None) -> BaseChatMe
             rows = cur.fetchall()
             chat_history = ChatMessageHistory()
             for row in rows:
-                chat_history.add_message(role=row['sender'], content=row['Message'])
+                chat_history.add_message(role=row['sender'], content=row['message'])
             return chat_history
 
             
