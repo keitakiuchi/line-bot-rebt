@@ -1,5 +1,7 @@
 from flask import Flask, request, abort
 import os
+from uuid import uuid4
+from datetime import datetime
 from linebot import (
     LineBotApi, WebhookHandler
 )
@@ -40,6 +42,15 @@ GPT4_API_URL = 'https://api.openai.com/v1/chat/completions'
 
 stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
 STRIPE_PRICE_ID = os.environ["SUBSCRIPTION_PRICE_ID"]
+
+# LangSmithによる追跡
+os.environ["LANGCHAIN_API_KEY"]
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+LANGCHAIN_ENDPOINT="https://api.smith.langchain.com"
+now = datetime.now()
+time_id = now.strftime("%y%m%d%H%M")
+unique_id = uuid4().hex[0:3]
+os.environ["LANGCHAIN_PROJECT"] = f"lineREBT_{time_id}-{unique_id}"
 
 # db接続
 def get_connection():
