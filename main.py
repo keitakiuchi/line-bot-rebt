@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__) # stripeの情報の確認
 import stripe
 import psycopg2
-import datetime
+from psycopg2.extras import RealDictCursor
 from typing import Dict, Any
 from fastapi import Request
 from langchain_openai import ChatOpenAI
@@ -92,6 +92,33 @@ def _per_request_config_modifier(config: Dict[str, Any], userId: str) -> Dict[st
 
     return config
 
+# PostgreSQLの設定
+db_config = {
+    'host': os.environ['DB_HOST'],
+    'port': 5432,
+    'user': os.environ['DB_USER'],
+    'password': os.environ['DB_PASS'],
+    'database': os.environ['DB_NAME'],
+}
+
+# データベースからメッセージ履歴を取得する関数
+def get_session_history(user_id: str, conversation_id: str) -> BaseChatMessageHistory:
+    with psycopg2.connect(**db_config, cursor_factory=RealDictCursor) as conn:
+        with conn.cursor() as cur:
+            cur.execute('SELECT * FROM line_bot_logs WHERE Lineid = %s AND ConversationId = %s ORDER BY Timestamp ASC', 
+                        (user_id, conversation_id))
+            rows = cur.fetchall()
+            chat_history = ChatMessageHistory()
+            for row in rows:
+                chat_history.add_message(role=row['role'], content=row['message'])
+            return chat_history
+            
+# def get_session_history(user_id: str,
+#                         conversation_id: str) -> BaseChatMessageHistory:
+#     if (user_id, conversation_id) not in store:
+#         store[(user_id, conversation_id)] = ChatMessageHistory()
+#     return store[(user_id, conversation_id)]
+
 model_root = ChatOpenAI(temperature=0, model_name="gpt-3.5-turbo")
 model_response = ChatOpenAI(temperature=1, model_name="gpt-4-turbo-preview")
 
@@ -112,13 +139,6 @@ Respond to the following input by reflection:
 Input: {input}
 Response:
 """
-
-def get_session_history(user_id: str,
-                        conversation_id: str) -> BaseChatMessageHistory:
-    if (user_id, conversation_id) not in store:
-        store[(user_id, conversation_id)] = ChatMessageHistory()
-    return store[(user_id, conversation_id)]
-
 
 reflection_chain = (
     ChatPromptTemplate.from_messages([
