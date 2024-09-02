@@ -102,15 +102,15 @@ db_config = {
 }
 
 # データベースからメッセージ履歴を取得する関数
-def get_session_history(user_id: str, conversation_id: str) -> BaseChatMessageHistory:
+def get_session_history(user_id: str) -> BaseChatMessageHistory:
     with psycopg2.connect(**db_config, cursor_factory=RealDictCursor) as conn:
         with conn.cursor() as cur:
             cur.execute('SELECT * FROM line_bot_logs WHERE Lineid = %s AND ConversationId = %s ORDER BY Timestamp ASC', 
-                        (user_id, conversation_id))
+                        (user_id))
             rows = cur.fetchall()
             chat_history = ChatMessageHistory()
             for row in rows:
-                chat_history.add_message(role=row['role'], content=row['message'])
+                chat_history.add_message(role=row['sender'], content=row['message'])
             return chat_history
             
 # def get_session_history(user_id: str,
