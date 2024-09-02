@@ -105,7 +105,7 @@ db_config = {
 def get_session_history(user_id: str) -> BaseChatMessageHistory:
     with psycopg2.connect(**db_config, cursor_factory=RealDictCursor) as conn:
         with conn.cursor() as cur:
-            cur.execute('SELECT * FROM line_bot_logs WHERE Lineid = %s AND ConversationId = %s ORDER BY Timestamp ASC', 
+            cur.execute('SELECT * FROM line_bot_logs WHERE Lineid = %s ORDER BY Timestamp ASC', 
                         (user_id))
             rows = cur.fetchall()
             chat_history = ChatMessageHistory()
