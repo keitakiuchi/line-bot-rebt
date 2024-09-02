@@ -113,11 +113,15 @@ db_config = {
 }
 
 # データベースからメッセージ履歴を取得する関数
-def get_session_history(user_id: str) -> BaseChatMessageHistory:
+def get_session_history(user_id: str, conversation_id: str = None) -> BaseChatMessageHistory:
+    # ここでconversation_idがuser_idとして使われる
+    if conversation_id is None:
+        conversation_id = user_id
+
     with psycopg2.connect(**db_config, cursor_factory=RealDictCursor) as conn:
         with conn.cursor() as cur:
             cur.execute('SELECT * FROM line_bot_logs WHERE Lineid = %s ORDER BY Timestamp ASC', 
-                        (user_id,))
+                        (conversation_id,))
             rows = cur.fetchall()
             chat_history = ChatMessageHistory()
             for row in rows:
@@ -257,36 +261,20 @@ def generate_claude_response(prompt, userId):
     config = {}  # 初期の空のconfigを作成
     # configを修正
     config = _per_request_config_modifier(config, userId)
-    input = {
-        "input": prompt,
-        "user_id": userId,  # user_idのみを使用
-        "conversation_id": userId  # ここでconversation_idも渡します
+    input ={
+        "input": prompt
     }
     try:
         response = full_chain.invoke(input, config)
+        # response.raise_for_status()  # Check if the request was successful
+        # response_json = response.json() # This line has been moved here
+        # # Add this line to log the response from  API
+        # # app.logger.info("Response from  API: " + str(response_json))
+        # return response_json['choices'][0]['message']['content'].strip()
         return response
     except requests.RequestException as e:
+        # app.logger.error(f" API request failed: {e}")
         return "Sorry, I couldn't understand that."
-
-## 一次メモリ版
-# def generate_claude_response(prompt, userId):
-#     config = {}  # 初期の空のconfigを作成
-#     # configを修正
-#     config = _per_request_config_modifier(config, userId)
-#     input ={
-#         "input": prompt
-#     }
-#     try:
-#         response = full_chain.invoke(input, config)
-#         # response.raise_for_status()  # Check if the request was successful
-#         # response_json = response.json() # This line has been moved here
-#         # # Add this line to log the response from  API
-#         # # app.logger.info("Response from  API: " + str(response_json))
-#         # return response_json['choices'][0]['message']['content'].strip()
-#         return response
-#     except requests.RequestException as e:
-#         # app.logger.error(f" API request failed: {e}")
-#         return "Sorry, I couldn't understand that."
 
 # def generate_claude_response(prompt, userId):
 #     headers = {
