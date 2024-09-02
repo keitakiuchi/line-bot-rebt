@@ -259,7 +259,8 @@ def generate_claude_response(prompt, userId):
     config = _per_request_config_modifier(config, userId)
     input = {
         "input": prompt,
-        "user_id": userId  # user_idのみを使用
+        "user_id": userId,  # user_idのみを使用
+        "conversation_id": userId  # ここでconversation_idも渡します
     }
     try:
         response = full_chain.invoke(input, config)
