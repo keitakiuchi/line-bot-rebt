@@ -80,13 +80,13 @@ sys_prompt = "You will be playing the role of a supportive, Japanese-speaking co
 
 ###### LangChain ######
 def _per_request_config_modifier(config: Dict[str, Any], userId: str) -> Dict[str, Any]:
-    """Update the config with userId"""
     config = config.copy()
 
     if "configurable" not in config:
         config["configurable"] = {}
 
     config["configurable"]["user_id"] = userId
+    config["configurable"]["conversation_id"] = userId  # Lineidをconversation_idとして設定
 
     return config
 
@@ -123,6 +123,7 @@ def get_session_history(user_id: str) -> BaseChatMessageHistory:
             for row in rows:
                 chat_history.add_message(role=row['sender'], content=row['Message'])
             return chat_history
+
             
 # def get_session_history(user_id: str,
 #                         conversation_id: str) -> BaseChatMessageHistory:
