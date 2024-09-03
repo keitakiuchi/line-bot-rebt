@@ -359,12 +359,14 @@ def route(info):
     global sys_prompt  # グローバル変数として sys_prompt を使用
     print("root_decision: ", info["topic"].lower())
     if "question" in info["topic"].lower():
-        sys_prompt = question_prompt.format_messages(user_input="{user_input}")[0]["content"]
+        # question_prompt をフォーマットして sys_prompt に格納
+        sys_prompt = question_prompt.format_prompt(user_input="{user_input}").to_string()
         return question_chain_memory
     # elif "other" in info["topic"].lower():
     #     return reflection_chain
     else:
-        sys_prompt = reflection_prompt.format_messages(user_input="{user_input}")[0]["content"]
+        # reflection_prompt をフォーマットして sys_prompt に格納
+        sys_prompt = reflection_prompt.format_prompt(user_input="{user_input}").to_string()
         return reflection_chain_memory
 
 
