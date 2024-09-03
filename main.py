@@ -77,7 +77,7 @@ def callback():
     return 'OK'
 
 # グローバル変数として sys_prompt を定義（または handle_line_message 内で初期化）
-sys_prompt = ""
+current_prompt = ""
 
 ###### LangChain ######
 def _per_request_config_modifier(config: Dict[str, Any], userId: str) -> Dict[str, Any]:
