@@ -115,25 +115,35 @@ db_config = {
 # データベースからメッセージ履歴を取得する関数
 def get_session_history(user_id: str,
                         conversation_id: str = None) -> BaseChatMessageHistory:
-    # conversation_id が指定されていない場合は user_id を使用する
     if conversation_id is None:
         conversation_id = user_id
 
     with psycopg2.connect(**db_config, cursor_factory=RealDictCursor) as conn:
         with conn.cursor() as cur:
-            cur.execute('SELECT * FROM line_bot_logs WHERE Lineid = %s ORDER BY Timestamp ASC', 
+            cur.execute('SELECT sender, message FROM line_bot_logs WHERE Lineid = %s ORDER BY Timestamp ASC', 
                         (conversation_id,))
             rows = cur.fetchall()
             chat_history = ChatMessageHistory()
             for row in rows:
-                chat_history.add_message(row['message'])  # roleは不要ならば削除
+                role = 'assistant' if row['sender'] == 'system' else 'user'
+                chat_history.add_message({"role": role, "content": row['message']})
             return chat_history
-            
+
 # def get_session_history(user_id: str,
-#                         conversation_id: str) -> BaseChatMessageHistory:
-#     if (user_id, conversation_id) not in store:
-#         store[(user_id, conversation_id)] = ChatMessageHistory()
-#     return store[(user_id, conversation_id)]
+#                         conversation_id: str = None) -> BaseChatMessageHistory:
+#     # conversation_id が指定されていない場合は user_id を使用する
+#     if conversation_id is None:
+#         conversation_id = user_id
+
+#     with psycopg2.connect(**db_config, cursor_factory=RealDictCursor) as conn:
+#         with conn.cursor() as cur:
+#             cur.execute('SELECT * FROM line_bot_logs WHERE Lineid = %s ORDER BY Timestamp ASC', 
+#                         (conversation_id,))
+#             rows = cur.fetchall()
+#             chat_history = ChatMessageHistory()
+#             for row in rows:
+#                 chat_history.add_message(row['message'])  # roleは不要ならば削除
+#             return chat_history
 
 model_root = ChatOpenAI(temperature=0, model_name="gpt-4o-mini")
 model_response = ChatOpenAI(temperature=1, model_name="gpt-4o")
@@ -249,7 +259,7 @@ full_chain = {
     "input": lambda x: x["input"]
 } | RunnableLambda(route) | StrOutputParser()
 
-store = {}
+# store = {}
 
 ######### LangChainここまで #########
 def generate_claude_response(prompt, userId):
