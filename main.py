@@ -280,7 +280,6 @@ REBTのフロー・ステップ
 4. 回答は2文以内で簡潔に。
 5. 回答がREBTの理論と技法に沿ったものであること。
 6. 質問はしなくてもよければしない。必要な場合は、可能な限り、質問形じゃない表現に変える。
-7. 出力の前に、出力しないメモとして、現在のフローステップ番号と名前、対話履歴における同じフロー・ステップの直近の継続回数を内部出力してください。それに基づいて、ユーザへのあなたの返答を考えます。
 
 禁止行為
 - 1つ前、2つ前、3つ前のフロー・ステップがすべて同じでない場合に、次のフロー・ステップに進まない。
@@ -290,7 +289,9 @@ REBTのフロー・ステップ
 - 回答に英単語はなるべく含めない（例えば、"awful" は、「ひどい」とする）
 
 回答の出力：
-ユーザへの返答のみ出力する。
+現在のフローステップ番号と名前を<flow>タブ内に、対話履歴における同じフロー・ステップの直近の継続回数を<numbers>タブ内に、これらに基づいて検討されたユーザへの返答を
+<response>タブ内に出力してください。
+
 
 対話を通して応答作成の手順を順守し、1つのフローステップを3回以上続けてください。
 
@@ -369,8 +370,11 @@ question_prompt = f"""
    - 全般的に進むべき方向を提案するのではなく、先にユーザの考えを聞く。その上で、必要があれば提案し、さらに、その提案に対するユーザの認識を確認する
    - 応答は簡潔に2文以内で
 
+# 回答の出力
+回答は<response>タブ内に出力してください。
+
 ユーザの質問: {{input}}
-Answer:
+Response:
 """
 
 question_chain = (ChatPromptTemplate.from_messages([
@@ -548,11 +552,23 @@ def handle_line_message(event):
             log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, current_prompt, model_name, True)
 
             if subscription_status == None: ####################本番は"active", テストはNone################
-                reply_text = generate_claude_response(event.message.text, userId)
+                full_response = generate_claude_response(event.message.text, userId)
+                # <response>タグの中身を抽出
+                match = re.search(r'<response>(.*?)</response>', full_response, re.DOTALL)
+                if match:
+                    reply_text = match.group(1)
+                else:
+                    reply_text = "返信が適切な形式ではありませんでした。"
             else:
                 response_count = get_system_responses_in_last_24_hours(userId)
                 if response_count < 5: 
-                    reply_text = generate_claude_response(event.message.text, userId)
+                    full_response = generate_claude_response(event.message.text, userId)
+                    # <response>タグの中身を抽出
+                    match = re.search(r'<response>(.*?)</response>', full_response, re.DOTALL)
+                    if match:
+                        reply_text = match.group(1)
+                    else:
+                        reply_text = "返信が適切な形式ではありませんでした。"
                 else:
                     line_login_url = os.environ["LINE_LOGIN_URL"]
                     reply_text = f"利用回数の上限に達しました。24時間後に再度お試しください。こちらから回数無制限の有料プランに申し込むこともできます：{line_login_url}"
@@ -563,6 +579,48 @@ def handle_line_message(event):
         log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text, current_prompt, model_name, True)
 
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+
+# @handler.add(MessageEvent, message=TextMessage)
+# def handle_line_message(event):
+#     global current_prompt  # current_prompt を使用するためにグローバル変数として宣言
+#     userId = getattr(event.source, 'user_id', None)
+    
+#     if event.message.text == "スタート" and userId:
+#         deactivate_conversation_history(userId)
+#         reply_text = "頼りにしてくださりありがとうございます。今日はどんなお話をうかがいましょうか？"
+#     else:
+#         # 現在のタイムスタンプを取得
+#         current_timestamp = datetime.datetime.now()
+
+#         if userId:
+#             # LangSmithによる追跡
+#             os.environ["LANGCHAIN_API_KEY"]
+#             os.environ["LANGCHAIN_TRACING_V2"] = "true"
+#             LANGCHAIN_ENDPOINT="https://api.smith.langchain.com"
+#             os.environ["LANGCHAIN_PROJECT"] = f"lineREBT_{userId}"
+            
+#             subscription_details = get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
+#             stripe_id = subscription_details['stripeId'] if subscription_details else None
+#             subscription_status = subscription_details['status'] if subscription_details else None
+
+#             log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, current_prompt, model_name, True)
+
+#             if subscription_status == None: ####################本番は"active", テストはNone################
+#                 reply_text = generate_claude_response(event.message.text, userId)
+#             else:
+#                 response_count = get_system_responses_in_last_24_hours(userId)
+#                 if response_count < 5: 
+#                     reply_text = generate_claude_response(event.message.text, userId)
+#                 else:
+#                     line_login_url = os.environ["LINE_LOGIN_URL"]
+#                     reply_text = f"利用回数の上限に達しました。24時間後に再度お試しください。こちらから回数無制限の有料プランに申し込むこともできます：{line_login_url}"
+#         else:
+#             reply_text = "エラーが発生しました。"
+
+#         # メッセージをログに保存
+#         log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text, current_prompt, model_name, True)
+
+#     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
 # stripeの情報を参照
 def get_subscription_details_for_user(userId, STRIPE_PRICE_ID):
