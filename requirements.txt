@@ -12,3 +12,4 @@ langchain-community
 langchain_openai
 langchain_anthropic
 fastapi
+langchain-google-genai
