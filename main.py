@@ -373,7 +373,7 @@ def route(info):
 # RunnableLambdaを使った結合
 full_chain = {
     "topic": chain,
-    "input": lambda x: x["user_input"]
+    "input": lambda x: x["input"]
 } | RunnableLambda(route) | StrOutputParser()
 
 # store = {}
