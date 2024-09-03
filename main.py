@@ -43,14 +43,14 @@ GPT4_API_URL = 'https://api.openai.com/v1/chat/completions'
 stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
 STRIPE_PRICE_ID = os.environ["SUBSCRIPTION_PRICE_ID"]
 
-# LangSmithによる追跡
-os.environ["LANGCHAIN_API_KEY"]
-os.environ["LANGCHAIN_TRACING_V2"] = "true"
-LANGCHAIN_ENDPOINT="https://api.smith.langchain.com"
-now = datetime.datetime.now()
-time_id = now.strftime("%y%m%d%H%M")
-unique_id = uuid4().hex[0:3]
-os.environ["LANGCHAIN_PROJECT"] = f"lineREBT_{userId}"
+# # LangSmithによる追跡
+# os.environ["LANGCHAIN_API_KEY"]
+# os.environ["LANGCHAIN_TRACING_V2"] = "true"
+# LANGCHAIN_ENDPOINT="https://api.smith.langchain.com"
+# now = datetime.datetime.now()
+# time_id = now.strftime("%y%m%d%H%M")
+# unique_id = uuid4().hex[0:3]
+# os.environ["LANGCHAIN_PROJECT"] = f"lineREBT_{userId}"
 
 # db接続
 def get_connection():
@@ -346,6 +346,12 @@ def deactivate_conversation_history(userId):
 @handler.add(MessageEvent, message=TextMessage)
 def handle_line_message(event):
     userId = getattr(event.source, 'user_id', None)
+    
+    # LangSmithによる追跡
+    os.environ["LANGCHAIN_API_KEY"]
+    os.environ["LANGCHAIN_TRACING_V2"] = "true"
+    LANGCHAIN_ENDPOINT="https://api.smith.langchain.com"
+    os.environ["LANGCHAIN_PROJECT"] = f"lineREBT_{userId}"
 
     if event.message.text == "スタート" and userId:
         deactivate_conversation_history(userId)
