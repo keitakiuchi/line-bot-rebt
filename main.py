@@ -161,6 +161,7 @@ def get_session_history(user_id: str,
 # モデル選択
 model_root = ChatOpenAI(temperature=0, model_name="gpt-4o-mini")
 # model_name = "gpt-4o"
+# model_response = ChatOpenAI(temperature=1, model_name=model_name)
 model_name="claude-3-5-sonnet-20240620"
 model_response = ChatAnthropic(temperature=1, model_name=model_name)
 
@@ -497,7 +498,6 @@ def handle_line_message(event):
             stripe_id = subscription_details['stripeId'] if subscription_details else None
             subscription_status = subscription_details['status'] if subscription_details else None
 
-            model_name = model_response.model_name
             log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, current_prompt, model_name, True)
 
             if subscription_status == "active": ####################本番は"active", テストはNone################
