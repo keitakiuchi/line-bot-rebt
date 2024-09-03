@@ -148,10 +148,7 @@ chain = (PromptTemplate.from_template(root_prompt)
 
 # 分岐先1：聞き返し
 reflection_prompt = f"""
-You are a supportive and often encouraging counselor.
-Always responses should be brief in Japanese, and do not ask questions. \
-Respond to the following input by reflection:
-
+あなたは親切なアシスタントです。
 Input: {input}
 Response:
 """
@@ -193,8 +190,7 @@ reflection_chain_memory = RunnableWithMessageHistory(
 
 # 分岐先2: 質問への回答
 question_prompt = f"""
-As a supportive and often encouraging counselor answer to the user's question.
-
+あなたは親切なアシスタントです。
 Input: {input}
 Response:
 """
