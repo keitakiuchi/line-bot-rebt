@@ -41,19 +41,10 @@ handler = WebhookHandler(YOUR_CHANNEL_SECRET)
 
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
-# GPT4_API_URL = 'https://api.openai.com/v1/chat/completions'
+GOOGLE_API_KEY = os.environ["GOOGLE_API_KEY"]
 
 stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
 STRIPE_PRICE_ID = os.environ["SUBSCRIPTION_PRICE_ID"]
-
-# # LangSmithによる追跡
-# os.environ["LANGCHAIN_API_KEY"]
-# os.environ["LANGCHAIN_TRACING_V2"] = "true"
-# LANGCHAIN_ENDPOINT="https://api.smith.langchain.com"
-# now = datetime.datetime.now()
-# time_id = now.strftime("%y%m%d%H%M")
-# unique_id = uuid4().hex[0:3]
-# os.environ["LANGCHAIN_PROJECT"] = f"lineREBT_{userId}"
 
 # db接続
 def get_connection():
