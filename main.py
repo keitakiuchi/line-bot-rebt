@@ -358,10 +358,12 @@ question_chain_memory = RunnableWithMessageHistory(
 def route(info):
     # print("root_decision: ", info["topic"].lower())
     if "question" in info["topic"].lower():
+        current_prompt = question_prompt.format(input="{input}")
         return question_chain_memory
     # elif "other" in info["topic"].lower():
     #     return reflection_chain
     else:
+        current_prompt = reflection_prompt.format(input="{input}")
         return reflection_chain_memory
 
 
