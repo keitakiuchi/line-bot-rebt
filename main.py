@@ -356,6 +356,7 @@ question_chain_memory = RunnableWithMessageHistory(
 # 統合
 # ルート関数
 def route(info):
+    global current_prompt
     # print("root_decision: ", info["topic"].lower())
     if "question" in info["topic"].lower():
         current_prompt = question_prompt.format(input="{input}")
@@ -464,7 +465,7 @@ def deactivate_conversation_history(userId):
 # LINEからのメッセージを処理し、必要に応じてStripeの情報も確認します。
 @handler.add(MessageEvent, message=TextMessage)
 def handle_line_message(event):
-    # global sys_prompt  # sys_prompt を使用するためにグローバル変数として宣言
+    global current_prompt  # current_prompt を使用するためにグローバル変数として宣言
     userId = getattr(event.source, 'user_id', None)
     
     if event.message.text == "スタート" and userId:
@@ -519,7 +520,7 @@ def check_subscription_status(userId):
     return get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
 
 # データをdbに入れる関数
-def log_to_database(timestamp, sender, userId, stripeId, message, is_active=True, sys_prompt=''):
+def log_to_database(timestamp, sender, userId, stripeId, message, is_active=True, sys_prompt=current_prompt):
     connection = get_connection()
     cursor = connection.cursor()
     try:
