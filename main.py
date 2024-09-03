@@ -135,11 +135,11 @@ def get_session_history(user_id: str,
 #         store[(user_id, conversation_id)] = ChatMessageHistory()
 #     return store[(user_id, conversation_id)]
 
-model_root = ChatOpenAI(temperature=0, model_name="gpt-3.5-turbo")
-model_response = ChatOpenAI(temperature=1, model_name="gpt-4-turbo-preview")
+model_root = ChatOpenAI(temperature=0, model_name="gpt-4o-mini")
+model_response = ChatOpenAI(temperature=1, model_name="gpt-4o")
 
-root_prompt = """
-入力が同意を表すものだったら"yes", それ以外だったら "other"と出力して。
+root_prompt = f"""
+{input}が質問だったら"question", それ以外だったら "other"と出力して。
 """
 
 chain = (PromptTemplate.from_template(root_prompt)
@@ -147,7 +147,7 @@ chain = (PromptTemplate.from_template(root_prompt)
          | StrOutputParser())
 
 # 分岐先1：聞き返し
-reflection_prompt = """
+reflection_prompt = f"""
 You are a supportive and often encouraging counselor.
 Always responses should be brief in Japanese, and do not ask questions. \
 Respond to the following input by reflection:
@@ -191,13 +191,12 @@ reflection_chain_memory = RunnableWithMessageHistory(
     ],
 )
 
-# 分岐先2: 質問
-
-question_prompt = """
-As a supportive and often encouraging counselor ask a question that clarify the user's thoughts and feelings in Japanese.
+# 分岐先2: 質問への回答
+question_prompt = f"""
+As a supportive and often encouraging counselor answer to the user's question.
 
 Input: {input}
-Question:
+Response:
 """
 
 question_chain = (ChatPromptTemplate.from_messages([
@@ -240,9 +239,9 @@ question_chain_memory = RunnableWithMessageHistory(
 # ルート関数
 def route(info):
     print("root_decision: ", info["topic"].lower())
-    if "yes" in info["topic"].lower():
+    if "question" in info["topic"].lower():
         return question_chain_memory
-    # elif "Other" in info["topic"].lower():
+    # elif "other" in info["topic"].lower():
     #     return reflection_chain
     else:
         return reflection_chain_memory
