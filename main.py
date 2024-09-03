@@ -123,10 +123,10 @@ def get_session_history(user_id: str,
 
     with psycopg2.connect(**db_config, cursor_factory=RealDictCursor) as conn:
         with conn.cursor() as cur:
-            # cur.execute('SELECT sender, message FROM line_bot_logs WHERE Lineid = %s ORDER BY id BESC', 
+            # cur.execute('SELECT sender, message FROM line_bot_logs WHERE Lineid = %s ORDER BY timestamp DESC, id DESC', 
             #             (conversation_id,))
             # 直近10件のメッセージを取得するクエリに変更
-            cur.execute('SELECT sender, message FROM line_bot_logs WHERE Lineid = %s ORDER BY id DESC LIMIT 10', 
+            cur.execute('SELECT sender, message FROM line_bot_logs WHERE Lineid = %s ORDER BY timestamp DESC, id DESC LIMIT 10', 
                          (conversation_id,))
             rows = cur.fetchall()
 
