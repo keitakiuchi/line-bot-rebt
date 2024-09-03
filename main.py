@@ -559,7 +559,7 @@ def handle_line_message(event):
                 if match:
                     reply_text = match.group(1)
                 else:
-                    reply_text = "返信が適切な形式ではありませんでした。"
+                    reply_text = full_response
             else:
                 response_count = get_system_responses_in_last_24_hours(userId)
                 if response_count < 5: 
@@ -569,7 +569,7 @@ def handle_line_message(event):
                     if match:
                         reply_text = match.group(1)
                     else:
-                        reply_text = "返信が適切な形式ではありませんでした。"
+                        reply_text = full_response
                 else:
                     line_login_url = os.environ["LINE_LOGIN_URL"]
                     reply_text = f"利用回数の上限に達しました。24時間後に再度お試しください。こちらから回数無制限の有料プランに申し込むこともできます：{line_login_url}"
