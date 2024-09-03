@@ -356,7 +356,6 @@ question_chain_memory = RunnableWithMessageHistory(
 # 統合
 # ルート関数
 def route(info):
-    global sys_prompt  # グローバル変数として sys_prompt を使用
     # print("root_decision: ", info["topic"].lower())
     if "question" in info["topic"].lower():
         # question_prompt をフォーマットして sys_prompt に格納
