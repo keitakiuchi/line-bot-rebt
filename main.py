@@ -130,8 +130,8 @@ def get_session_history(user_id: str,
                          (conversation_id,))
             rows = cur.fetchall()
 
-            # メッセージを逆順から元の順序に戻す
-            rows.reverse()
+            # # メッセージを逆順から元の順序に戻す
+            # rows.reverse()
             
             chat_history = ChatMessageHistory()
             for row in rows:
