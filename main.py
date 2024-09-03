@@ -126,7 +126,7 @@ def get_session_history(user_id: str,
             rows = cur.fetchall()
             chat_history = ChatMessageHistory()
             for row in rows:
-                chat_history.add_message(row['Message'])  # roleは不要ならば削除
+                chat_history.add_message(row['message'])  # roleは不要ならば削除
             return chat_history
             
 # def get_session_history(user_id: str,
@@ -347,12 +347,6 @@ def deactivate_conversation_history(userId):
 def handle_line_message(event):
     userId = getattr(event.source, 'user_id', None)
     
-    # LangSmithによる追跡
-    os.environ["LANGCHAIN_API_KEY"]
-    os.environ["LANGCHAIN_TRACING_V2"] = "true"
-    LANGCHAIN_ENDPOINT="https://api.smith.langchain.com"
-    os.environ["LANGCHAIN_PROJECT"] = f"lineREBT_{userId}"
-
     if event.message.text == "スタート" and userId:
         deactivate_conversation_history(userId)
         reply_text = "頼りにしてくださりありがとうございます。今日はどんなお話をうかがいましょうか？"
@@ -361,6 +355,12 @@ def handle_line_message(event):
         current_timestamp = datetime.datetime.now()
 
         if userId:
+            # LangSmithによる追跡
+            os.environ["LANGCHAIN_API_KEY"]
+            os.environ["LANGCHAIN_TRACING_V2"] = "true"
+            LANGCHAIN_ENDPOINT="https://api.smith.langchain.com"
+            os.environ["LANGCHAIN_PROJECT"] = f"lineREBT_{userId}"
+            
             subscription_details = get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
             stripe_id = subscription_details['stripeId'] if subscription_details else None
             subscription_status = subscription_details['status'] if subscription_details else None
