@@ -138,8 +138,8 @@ def get_session_history(user_id: str,
                 role = 'assistant' if row['sender'] == 'system' else 'user'
                 chat_history.add_message({"role": role, "content": row['message']})
             
-            # デバッグ用: 追加された履歴を出力
-            print("Chat history being returned:", chat_history.messages)
+            # # デバッグ用: 追加された履歴を出力
+            # print("Chat history being returned:", chat_history.messages)
             return chat_history
 
 # def get_session_history(user_id: str,
@@ -392,6 +392,8 @@ def generate_claude_response(prompt, userId):
     }
 
     try:
+         # 履歴のデバッグログ
+        print("Debug: History before model invocation:", get_session_history(userId, userId).messages)
         response = full_chain.invoke(input, config)
         return response
     except Exception as e:
