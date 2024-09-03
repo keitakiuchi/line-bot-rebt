@@ -21,6 +21,7 @@ from psycopg2.extras import RealDictCursor
 from typing import Dict, Any
 from fastapi import Request
 from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import PromptTemplate, ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.chat_history import BaseChatMessageHistory
@@ -38,7 +39,8 @@ line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(YOUR_CHANNEL_SECRET)
 
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-GPT4_API_URL = 'https://api.openai.com/v1/chat/completions'
+ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
+# GPT4_API_URL = 'https://api.openai.com/v1/chat/completions'
 
 stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
 STRIPE_PRICE_ID = os.environ["SUBSCRIPTION_PRICE_ID"]
@@ -152,8 +154,10 @@ def get_session_history(user_id: str,
 #                 chat_history.add_message(row['message'])  # roleは不要ならば削除
 #             return chat_history
 
+# モデル選択
 model_root = ChatOpenAI(temperature=0, model_name="gpt-4o-mini")
-model_response = ChatOpenAI(temperature=1, model_name="gpt-4o")
+# model_response = ChatOpenAI(temperature=1, model_name="gpt-4o")
+model_response = ChatAnthropic(temperature=1, model_name="claude-3-5-sonnet-20240620")
 
 root_prompt = f"""
 「{{input}}」が、質問かそれ以外かを判断してください。質問だったら"question", それ以外だったら "other"と出力しください。明確な質問だけを質問と判断し、単に状況にいて述べているものは、質問とは判断しないで。
