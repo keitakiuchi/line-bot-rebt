@@ -156,7 +156,7 @@ model_root = ChatOpenAI(temperature=0, model_name="gpt-4o-mini")
 model_response = ChatOpenAI(temperature=1, model_name="gpt-4o")
 
 root_prompt = f"""
-{{input}}が質問かそれ以外化を判断してください。質問だったら"question", それ以外だったら "other"と出力しください。明確な質問だけを質問と判断し、単に状況にいて述べているものは、質問とは判断しないで。
+「{{input}}」が、質問かそれ以外かを判断してください。質問だったら"question", それ以外だったら "other"と出力しください。明確な質問だけを質問と判断し、単に状況にいて述べているものは、質問とは判断しないで。
 Output:
 """
 
@@ -356,17 +356,17 @@ question_chain_memory = RunnableWithMessageHistory(
 # 統合
 # ルート関数
 def route(info):
-    # global sys_prompt  # グローバル変数として sys_prompt を使用
+    global sys_prompt  # グローバル変数として sys_prompt を使用
     # print("root_decision: ", info["topic"].lower())
     if "question" in info["topic"].lower():
-        # # question_prompt をフォーマットして sys_prompt に格納
-        # sys_prompt = question_prompt.format_prompt(input="{input}").to_string()
+        # question_prompt をフォーマットして sys_prompt に格納
+        sys_prompt = question_prompt.format_prompt(input="{input}").to_string()
         return question_chain_memory
     # elif "other" in info["topic"].lower():
     #     return reflection_chain
     else:
-        # # reflection_prompt をフォーマットして sys_prompt に格納
-        # sys_prompt = reflection_prompt.format_prompt(input="{input}").to_string()
+        # reflection_prompt をフォーマットして sys_prompt に格納
+        sys_prompt = reflection_prompt.format_prompt(input="{input}").to_string()
         return reflection_chain_memory
 
 
