@@ -496,7 +496,8 @@ def handle_line_message(event):
             stripe_id = subscription_details['stripeId'] if subscription_details else None
             subscription_status = subscription_details['status'] if subscription_details else None
 
-            log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, current_prompt, True)  # is_activeをTrueで保存
+            model_name = model_response.model_name
+            log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, current_prompt, model_name, True)
 
             if subscription_status == "active": ####################本番は"active", テストはNone################
                 reply_text = generate_claude_response(event.message.text, userId)
@@ -510,7 +511,7 @@ def handle_line_message(event):
             reply_text = "エラーが発生しました。"
 
         # メッセージをログに保存
-        log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text, current_prompt, True)  # is_activeをTrueで保存
+        log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text, current_prompt, model_name, True)
 
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
@@ -530,15 +531,15 @@ def check_subscription_status(userId):
     return get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
 
 # データをdbに入れる関数
-def log_to_database(timestamp, sender, userId, stripeId, message, sys_prompt, is_active=True):
+def log_to_database(timestamp, sender, userId, stripeId, message, sys_prompt, model_name=None, is_active=True):
     connection = get_connection()
     cursor = connection.cursor()
     try:
         query = """
-        INSERT INTO line_bot_logs (timestamp, sender, lineId, stripeId, message, is_active, sys_prompt) 
-        VALUES (%s, %s, %s, %s, %s, %s, %s);
+        INSERT INTO line_bot_logs (timestamp, sender, lineId, stripeId, message, is_active, sys_prompt, model) 
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
         """
-        cursor.execute(query, (timestamp, sender, userId, stripeId, message, is_active, sys_prompt))
+        cursor.execute(query, (timestamp, sender, userId, stripeId, message, is_active, sys_prompt, model_name))
         connection.commit()
     except Exception as e:
         print(f"Error: {e}")
