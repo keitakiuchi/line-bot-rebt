@@ -156,7 +156,7 @@ model_root = ChatOpenAI(temperature=0, model_name="gpt-4o-mini")
 model_response = ChatOpenAI(temperature=1, model_name="gpt-4o")
 
 root_prompt = f"""
-{{input}}が質問かそれ以外化を判断してください。質問だったら"question", それ以外だったら "other"と出力しください。明確な質問だけを質問と判断し、単に状況にいて述べているものは、質問とは判断しないで。
+{input}が質問かそれ以外化を判断してください。質問だったら"question", それ以外だったら "other"と出力しください。明確な質問だけを質問と判断し、単に状況にいて述べているものは、質問とは判断しないで。
 Output:
 """
 
@@ -239,7 +239,7 @@ REBTのフロー・ステップ
 
 対話を通して応答作成の手順を順守し、1つのフローステップを3回以上続けてください。
 
-Input: {{input}}
+Input: {input}
 Response:
 """
 
@@ -313,7 +313,7 @@ question_prompt = f"""
    - 全般的に進むべき方向を提案するのではなく、先にユーザの考えを聞く。その上で、必要があれば提案し、さらに、その提案に対するユーザの認識を確認する
    - 応答は簡潔に2文以内で
 
-Input: {{input}}
+Input: {input}
 Response:
 """
 
