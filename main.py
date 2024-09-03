@@ -356,17 +356,12 @@ question_chain_memory = RunnableWithMessageHistory(
 # 統合
 # ルート関数
 def route(info):
-    global prompt_log
     # print("root_decision: ", info["topic"].lower())
     if "question" in info["topic"].lower():
-        # question_prompt をフォーマットして sys_prompt に格納
-        prompt_log = question_prompt.format_prompt(input="{input}").to_string()
         return question_chain_memory
     # elif "other" in info["topic"].lower():
     #     return reflection_chain
     else:
-        # reflection_prompt をフォーマットして sys_prompt に格納
-        prompt_log = reflection_prompt.format_prompt(input="{input}").to_string()
         return reflection_chain_memory
 
 
