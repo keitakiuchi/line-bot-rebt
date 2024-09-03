@@ -123,11 +123,11 @@ def get_session_history(user_id: str,
 
     with psycopg2.connect(**db_config, cursor_factory=RealDictCursor) as conn:
         with conn.cursor() as cur:
-            cur.execute('SELECT sender, message FROM line_bot_logs WHERE Lineid = %s ORDER BY Timestamp ASC', 
-                        (conversation_id,))
-            # # 直近5件のメッセージを取得するクエリに変更
-            # cur.execute('SELECT sender, message FROM line_bot_logs WHERE Lineid = %s ORDER BY Timestamp DESC LIMIT 5', 
-            #              (conversation_id,))
+            # cur.execute('SELECT sender, message FROM line_bot_logs WHERE Lineid = %s ORDER BY Timestamp ASC', 
+            #             (conversation_id,))
+            # 直近10件のメッセージを取得するクエリに変更
+            cur.execute('SELECT sender, message FROM line_bot_logs WHERE Lineid = %s ORDER BY Timestamp DESC LIMIT 5', 
+                         (conversation_id,))
             rows = cur.fetchall()
             chat_history = ChatMessageHistory()
             for row in rows:
