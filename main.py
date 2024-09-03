@@ -22,6 +22,7 @@ from typing import Dict, Any
 from fastapi import Request
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import PromptTemplate, ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.chat_history import BaseChatMessageHistory
@@ -158,12 +159,23 @@ def get_session_history(user_id: str,
 #                 chat_history.add_message(row['message'])  # roleは不要ならば削除
 #             return chat_history
 
-# モデル選択
-model_root = ChatOpenAI(temperature=0, model_name="gpt-4o-mini")
+# ルートモデル選択
+model_root = ChatGoogleGenerativeAI(temperature=0, model="gemini-1.5-pro")
+# model_root = ChatOpenAI(temperature=0, model="gpt-4o-mini")
+
+# 応答モデル選択
+model_name="gemini-1.5-pro"
 # model_name = "gpt-4o"
-# model_response = ChatOpenAI(temperature=1, model_name=model_name)
-model_name="claude-3-5-sonnet-20240620"
-model_response = ChatAnthropic(temperature=1, model_name=model_name)
+# model_name="claude-3-5-sonnet-20240620"
+
+if model_name.startswith("gemini"):
+    model_response = ChatGoogleGenerativeAI(temperature=1, model=model_name)
+elif model_name.startswith("gpt"):
+    model_response = ChatOpenAI(temperature=1, model=model_name)
+elif model_name.startswith("claude"):
+    model_response = ChatAnthropic(temperature=1, model=model_name)
+else:
+    raise ValueError("Unknown model name")
 
 root_prompt = f"""
 「{{input}}」が、質問かそれ以外かを判断してください。質問だったら"question", それ以外だったら "other"と出力しください。明確な質問だけを質問と判断し、単に状況にいて述べているものは、質問とは判断しないで。
