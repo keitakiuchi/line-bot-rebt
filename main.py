@@ -155,8 +155,8 @@ model_root = ChatOpenAI(temperature=0, model_name="gpt-4o-mini")
 model_response = ChatOpenAI(temperature=1, model_name="gpt-4o")
 
 root_prompt = f"""
-{input}が質問だったら"question", それ以外だったら "other"と出力して。明確な質問だけ質問と判断し、単に状況にいて述べている者は、質問とは判断しないで。
-Classification:
+{input}が質問かそれ以外化を判断してください。質問だったら"question", それ以外だったら "other"と出力しください。明確な質問だけを質問と判断し、単に状況にいて述べている者は、質問とは判断しないで。
+Output:
 """
 
 chain = (PromptTemplate.from_template(root_prompt)
