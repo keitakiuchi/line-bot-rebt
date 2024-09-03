@@ -138,8 +138,8 @@ def get_session_history(user_id: str,
                 role = 'assistant' if row['sender'] == 'system' else 'user'
                 chat_history.add_message({"role": role, "content": row['message']})
             
-            # # デバッグ用: 追加された履歴を出力
-            # print("Chat history being returned:", chat_history.messages)
+            # デバッグ用: 追加された履歴を出力
+            print("Chat history being returned:", chat_history.messages)
             return chat_history
 
 # def get_session_history(user_id: str,
@@ -242,11 +242,12 @@ REBTのフロー・ステップ
 
 回答は次の形式で出力してください：
 現在のフローステップ番号と名前を<flow>タブに、対話履歴における同じフロー・ステップの直近の継続回数<number>タブに、ユーザへのあなたの返答を<response>タブにいったんメモし、
-<response>タブの中身だけ出力してください。
+<response>タブの中身だけ出力してください。タブ自体や、<flow>タブ、<number>タブの中身は出力しないでください。
 
 対話を通して応答作成の手順を順守し、1つのフローステップを3回以上続けてください。
 
-Input: {{input}}
+対話履歴: {{chat_history}}
+ユーザ入力: {{input}}
 Response:
 """
 
@@ -320,7 +321,8 @@ question_prompt = f"""
    - 全般的に進むべき方向を提案するのではなく、先にユーザの考えを聞く。その上で、必要があれば提案し、さらに、その提案に対するユーザの認識を確認する
    - 応答は簡潔に2文以内で
 
-Input: {{input}}
+対話履歴: {{chat_history}}
+ユーザ入力: {{input}}
 Response:
 """
 
