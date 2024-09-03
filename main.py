@@ -503,7 +503,7 @@ def handle_line_message(event):
 
             log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, current_prompt, model_name, True)
 
-            if subscription_status == "active": ####################本番は"active", テストはNone################
+            if subscription_status == None: ####################本番は"active", テストはNone################
                 reply_text = generate_claude_response(event.message.text, userId)
             else:
                 response_count = get_system_responses_in_last_24_hours(userId)
