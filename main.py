@@ -126,9 +126,13 @@ def get_session_history(user_id: str,
             # cur.execute('SELECT sender, message FROM line_bot_logs WHERE Lineid = %s ORDER BY Timestamp ASC', 
             #             (conversation_id,))
             # 直近10件のメッセージを取得するクエリに変更
-            cur.execute('SELECT sender, message FROM line_bot_logs WHERE Lineid = %s ORDER BY Timestamp DESC LIMIT 5', 
+            cur.execute('SELECT sender, message FROM line_bot_logs WHERE Lineid = %s ORDER BY Timestamp DESC LIMIT 10', 
                          (conversation_id,))
             rows = cur.fetchall()
+
+            # メッセージを逆順から元の順序に戻す
+            rows.reverse()
+            
             chat_history = ChatMessageHistory()
             for row in rows:
                 role = 'assistant' if row['sender'] == 'system' else 'user'
