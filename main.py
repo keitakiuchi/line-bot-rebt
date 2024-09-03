@@ -79,29 +79,29 @@ def callback():
 sys_prompt = "You will be playing the role of a supportive, Japanese-speaking counselor. Here is the conversation history so far:\n\n<conversation_history>\n{{CONVERSATION_HISTORY}}\n</conversation_history>\n\nThe user has just said:\n<user_statement>\n{{QUESTION}}\n</user_statement>\n\nPlease carefully review the conversation history and the user's latest statement. Your goal is to provide supportive counseling while following this specific method:\n\n1. Listen-Back 1: After the user makes a statement, paraphrase it into a single sentence while adding a new nuance or interpretation. \n2. Wait for the user's reply to your Listen-Back 1.\n3. Listen-Back 2: After receiving the user's response, further paraphrase their reply, condensing it into one sentence and adding another layer of meaning or interpretation.\n4. Once you've done Listen-Back 1 and Listen-Back 2 and received a response from the user, you may then pose a question from the list below, in the specified order. Do not ask a question out of order.\n5. After the user answers your question, return to Listen-Back 1 - paraphrase their answer in one sentence and introduce a new nuance or interpretation. \n6. You can ask your next question only after receiving a response to your Listen-Back 1, providing your Listen-Back 2, and getting another response from the user.\n\nIn essence, never ask consecutive questions. Always follow the pattern of Listen-Back 1, user response, Listen-Back 2, another user response before moving on to the next question.\n\nHere is the order in which you should ask questions:\n1. Start by asking the user about something they find particularly troubling.\n2. Then, inquire about how they'd envision the ideal outcome. \n3. Proceed by asking about what little they've already done.\n4. Follow up by exploring other actions they're currently undertaking.\n5. Delve into potential resources that could aid in achieving their goals.\n6. Discuss the immediate actions they can take to move closer to their aspirations.\n7. Lastly, encourage them to complete the very first step in that direction with some positive feedback, and ask if you can close the conversation.\n\n<example>\nUser: I'm so busy I don't even have time to sleep.\nYou: You are having trouble getting enough sleep.\nUser: Yes.\nYou: You are so busy that you want to manage to get some sleep.\nUser: Yes.\nYou: In what way do you have problems when you get less sleep?\n</example>\n\n<example>  \nUser: I get sick when I get less sleep.\nYou: You are worried about getting sick.\nUser: Yes.\nYou: You feel that sleep time is important to stay healthy.\nUser: That is right.\nYou: What do you hope to become?\n</example>\n\n<example>\nUser: I want to be free from suffering. But I cannot relinquish responsibility.\nYou: You want to be free from suffering, but at the same time you can't give up your responsibility.\nUser: Exactly.\nYou: You are searching for your own way forward.\nUser: Maybe so.\nYou: When do you think you are getting closer to the path you should be on, even if only a little?  \n</example>\n\nPlease follow the above procedures strictly for the consultation."
 
 ###### LangChain ######
-def _per_request_config_modifier(config: Dict[str, Any], userId: str) -> Dict[str, Any]:
-    config = config.copy()
-
-    if "configurable" not in config:
-        config["configurable"] = {}
-
-    config["configurable"]["user_id"] = userId
-    config["configurable"]["conversation_id"] = userId  # Lineidをconversation_idとして設定
-
-    return config
-
 # def _per_request_config_modifier(config: Dict[str, Any], userId: str) -> Dict[str, Any]:
-#     """Update the config with userId"""
 #     config = config.copy()
 
-#     # "configurable"キーが存在しない場合は新しく作成する
 #     if "configurable" not in config:
 #         config["configurable"] = {}
 
-#     config["configurable"]["conversation_id"] = "test0902"
 #     config["configurable"]["user_id"] = userId
+#     config["configurable"]["conversation_id"] = userId  # Lineidをconversation_idとして設定
 
 #     return config
+
+def _per_request_config_modifier(config: Dict[str, Any], userId: str) -> Dict[str, Any]:
+    """Update the config with userId"""
+    config = config.copy()
+
+    # "configurable"キーが存在しない場合は新しく作成する
+    if "configurable" not in config:
+        config["configurable"] = {}
+
+    config["configurable"]["conversation_id"] = "test0902"
+    config["configurable"]["user_id"] = userId
+
+    return config
 
 # PostgreSQLの設定
 db_config = {
@@ -112,28 +112,28 @@ db_config = {
     'database': os.environ['DB_NAME'],
 }
 
-# データベースからメッセージ履歴を取得する関数
-def get_session_history(user_id: str, conversation_id: str = None) -> BaseChatMessageHistory:
-    # ここでconversation_idがuser_idとして使われる
-    if conversation_id is None:
-        conversation_id = user_id
+# # データベースからメッセージ履歴を取得する関数
+# def get_session_history(user_id: str, conversation_id: str = None) -> BaseChatMessageHistory:
+#     # ここでconversation_idがuser_idとして使われる
+#     if conversation_id is None:
+#         conversation_id = user_id
 
-    with psycopg2.connect(**db_config, cursor_factory=RealDictCursor) as conn:
-        with conn.cursor() as cur:
-            cur.execute('SELECT * FROM line_bot_logs WHERE Lineid = %s ORDER BY Timestamp ASC', 
-                        (conversation_id,))
-            rows = cur.fetchall()
-            chat_history = ChatMessageHistory()
-            for row in rows:
-                chat_history.add_message(role=row['sender'], content=row['message'])
-            return chat_history
+#     with psycopg2.connect(**db_config, cursor_factory=RealDictCursor) as conn:
+#         with conn.cursor() as cur:
+#             cur.execute('SELECT * FROM line_bot_logs WHERE Lineid = %s ORDER BY Timestamp ASC', 
+#                         (conversation_id,))
+#             rows = cur.fetchall()
+#             chat_history = ChatMessageHistory()
+#             for row in rows:
+#                 chat_history.add_message(role=row['sender'], content=row['message'])
+#             return chat_history
 
             
-# def get_session_history(user_id: str,
-#                         conversation_id: str) -> BaseChatMessageHistory:
-#     if (user_id, conversation_id) not in store:
-#         store[(user_id, conversation_id)] = ChatMessageHistory()
-#     return store[(user_id, conversation_id)]
+def get_session_history(user_id: str,
+                        conversation_id: str) -> BaseChatMessageHistory:
+    if (user_id, conversation_id) not in store:
+        store[(user_id, conversation_id)] = ChatMessageHistory()
+    return store[(user_id, conversation_id)]
 
 model_root = ChatOpenAI(temperature=0, model_name="gpt-3.5-turbo")
 model_response = ChatOpenAI(temperature=1, model_name="gpt-4-turbo-preview")
@@ -257,56 +257,56 @@ full_chain = {
 store = {}
 
 ######### LangChainここまで #########
-def generate_claude_response(prompt, userId):
-    config = {}  # 初期の空のconfigを作成
-    # configを修正
-    config = _per_request_config_modifier(config, userId)
-    input ={
-        "input": prompt
-    }
-    try:
-        response = full_chain.invoke(input, config)
-        # response.raise_for_status()  # Check if the request was successful
-        # response_json = response.json() # This line has been moved here
-        # # Add this line to log the response from  API
-        # # app.logger.info("Response from  API: " + str(response_json))
-        # return response_json['choices'][0]['message']['content'].strip()
-        return response
-    except requests.RequestException as e:
-        # app.logger.error(f" API request failed: {e}")
-        return "Sorry, I couldn't understand that."
-
 # def generate_claude_response(prompt, userId):
-#     headers = {
-#         'Content-Type': 'application/json',
-#         'Authorization': f'Bearer {OPENAI_API_KEY}'
+#     config = {}  # 初期の空のconfigを作成
+#     # configを修正
+#     config = _per_request_config_modifier(config, userId)
+#     input ={
+#         "input": prompt
 #     }
-#     # 過去の会話履歴を取得
-#     conversation_history = get_conversation_history(userId)
-#     # sys_promptを会話の最初に追加
-#     conversation_history.insert(0, {"role": "system", "content": sys_prompt})
-#     # ユーザーからの最新のメッセージを追加
-#     conversation_history.append({"role": "user", "content": prompt})
-
-#     data = {
-#         'model': "gpt-4o",
-#         'messages': conversation_history,
-#         'temperature': 1
-#     }
-#     # ここでconversation_historyの内容をログに出力
-#     # app.logger.info("Conversation history sent to : " + str(conversation_history))
-#     # 旧："gpt-4-1106-preview"
-
 #     try:
-#         response = requests.post(GPT4_API_URL, headers=headers, json=data)
-#         response.raise_for_status()  # Check if the request was successful
-#         response_json = response.json() # This line has been moved here
-#         # Add this line to log the response from  API
-#         # app.logger.info("Response from  API: " + str(response_json))
-#         return response_json['choices'][0]['message']['content'].strip()
+#         response = full_chain.invoke(input, config)
+#         # response.raise_for_status()  # Check if the request was successful
+#         # response_json = response.json() # This line has been moved here
+#         # # Add this line to log the response from  API
+#         # # app.logger.info("Response from  API: " + str(response_json))
+#         # return response_json['choices'][0]['message']['content'].strip()
+#         return response
 #     except requests.RequestException as e:
 #         # app.logger.error(f" API request failed: {e}")
 #         return "Sorry, I couldn't understand that."
+
+def generate_claude_response(prompt, userId):
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {OPENAI_API_KEY}'
+    }
+    # 過去の会話履歴を取得
+    conversation_history = get_conversation_history(userId)
+    # sys_promptを会話の最初に追加
+    conversation_history.insert(0, {"role": "system", "content": sys_prompt})
+    # ユーザーからの最新のメッセージを追加
+    conversation_history.append({"role": "user", "content": prompt})
+
+    data = {
+        'model': "gpt-4o",
+        'messages': conversation_history,
+        'temperature': 1
+    }
+    # ここでconversation_historyの内容をログに出力
+    # app.logger.info("Conversation history sent to : " + str(conversation_history))
+    # 旧："gpt-4-1106-preview"
+
+    try:
+        response = requests.post(GPT4_API_URL, headers=headers, json=data)
+        response.raise_for_status()  # Check if the request was successful
+        response_json = response.json() # This line has been moved here
+        # Add this line to log the response from  API
+        # app.logger.info("Response from  API: " + str(response_json))
+        return response_json['choices'][0]['message']['content'].strip()
+    except requests.RequestException as e:
+        # app.logger.error(f" API request failed: {e}")
+        return "Sorry, I couldn't understand that."
 
         
 def get_system_responses_in_last_24_hours(userId):
