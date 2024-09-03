@@ -10,4 +10,5 @@ langchain
 langchain_core
 langchain-community
 langchain_openai
+langchain_anthropic
 fastapi
