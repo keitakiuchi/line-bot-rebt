@@ -156,7 +156,7 @@ model_root = ChatOpenAI(temperature=0, model_name="gpt-4o-mini")
 model_response = ChatOpenAI(temperature=1, model_name="gpt-4o")
 
 root_prompt = f"""
-{{user_input}}が質問かそれ以外化を判断してください。質問だったら"question", それ以外だったら "other"と出力しください。明確な質問だけを質問と判断し、単に状況にいて述べているものは、質問とは判断しないで。
+{{input}}が質問かそれ以外化を判断してください。質問だったら"question", それ以外だったら "other"と出力しください。明確な質問だけを質問と判断し、単に状況にいて述べているものは、質問とは判断しないで。
 Output:
 """
 
@@ -239,7 +239,7 @@ REBTのフロー・ステップ
 
 対話を通して応答作成の手順を順守し、1つのフローステップを3回以上続けてください。
 
-Input: {{user_input}}
+Input: {{input}}
 Response:
 """
 
@@ -249,7 +249,7 @@ reflection_chain = (
             "system",
             reflection_prompt,
         ),
-        ("human", "{user_input}"),
+        ("human", "{input}"),
     ])
     | model_response)
 
@@ -313,7 +313,7 @@ question_prompt = f"""
    - 全般的に進むべき方向を提案するのではなく、先にユーザの考えを聞く。その上で、必要があれば提案し、さらに、その提案に対するユーザの認識を確認する
    - 応答は簡潔に2文以内で
 
-Input: {{user_input}}
+Input: {{input}}
 Response:
 """
 
@@ -323,7 +323,7 @@ question_chain = (ChatPromptTemplate.from_messages([
         question_prompt,
     ),
     MessagesPlaceholder(variable_name="history"),
-    ("human", "{user_input}"),
+    ("human", "{input}"),
 ])
                   | model_response)
 
@@ -360,13 +360,13 @@ def route(info):
     print("root_decision: ", info["topic"].lower())
     if "question" in info["topic"].lower():
         # question_prompt をフォーマットして sys_prompt に格納
-        sys_prompt = question_prompt.format_prompt(user_input="{user_input}").to_string()
+        sys_prompt = question_prompt.format_prompt(input="{input}").to_string()
         return question_chain_memory
     # elif "other" in info["topic"].lower():
     #     return reflection_chain
     else:
         # reflection_prompt をフォーマットして sys_prompt に格納
-        sys_prompt = reflection_prompt.format_prompt(user_input="{user_input}").to_string()
+        sys_prompt = reflection_prompt.format_prompt(input="{input}").to_string()
         return reflection_chain_memory
 
 
@@ -381,7 +381,7 @@ full_chain = {
 ######### LangChainここまで #########
 def generate_claude_response(prompt, userId):
     config = _per_request_config_modifier({}, userId)  # 初期の config に userId を追加
-    user_input = {
+    input = {
         "input": prompt,
         "user_id": userId  # user_idのみを使用
     }
