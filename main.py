@@ -190,7 +190,8 @@ chain = (
         MessagesPlaceholder(variable_name="history"),
         ("human", "{input}"),
     ])
-    | model_root)
+    | model_root
+    | StrOutputParser())
 
 chain_memory = RunnableWithMessageHistory(
     chain,
