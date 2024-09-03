@@ -507,7 +507,7 @@ def handle_line_message(event):
                 if response_count < 5: 
                     reply_text = generate_claude_response(event.message.text, userId)
                 else:
-                    reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。こちらから回数無制限の有料プランに申し込むこともできます：https://line-login-3fbeac7c6978.herokuapp.com/"
+                    reply_text = "利用回数の上限に達しました。24時間後に再度お試しください。こちらから回数無制限の有料プランに申し込むこともできます：https://line-login-rebt-03d46f611a99.herokuapp.com/"
         else:
             reply_text = "エラーが発生しました。"
 
