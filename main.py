@@ -160,8 +160,9 @@ def get_session_history(user_id: str,
 
 # モデル選択
 model_root = ChatOpenAI(temperature=0, model_name="gpt-4o-mini")
-# model_response = ChatOpenAI(temperature=1, model_name="gpt-4o")
-model_response = ChatAnthropic(temperature=1, model_name="claude-3-5-sonnet-20240620")
+# model_name = "gpt-4o"
+model_name="claude-3-5-sonnet-20240620"
+model_response = ChatAnthropic(temperature=1, model_name=model_name)
 
 root_prompt = f"""
 「{{input}}」が、質問かそれ以外かを判断してください。質問だったら"question", それ以外だったら "other"と出力しください。明確な質問だけを質問と判断し、単に状況にいて述べているものは、質問とは判断しないで。
@@ -393,8 +394,8 @@ def generate_claude_response(prompt, userId):
     }
 
     try:
-         # 履歴のデバッグログ
-        print("Debug: History before model invocation:", get_session_history(userId, userId).messages)
+        # # 履歴のデバッグログ
+        # print("Debug: History before model invocation:", get_session_history(userId, userId).messages)
         response = full_chain.invoke(input, config)
         return response
     except Exception as e:
