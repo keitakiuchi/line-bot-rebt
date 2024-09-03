@@ -50,7 +50,7 @@ LANGCHAIN_ENDPOINT="https://api.smith.langchain.com"
 now = datetime.datetime.now()
 time_id = now.strftime("%y%m%d%H%M")
 unique_id = uuid4().hex[0:3]
-os.environ["LANGCHAIN_PROJECT"] = f"lineREBT_{user_id}"
+os.environ["LANGCHAIN_PROJECT"] = f"lineREBT_{userId}"
 
 # db接続
 def get_connection():
