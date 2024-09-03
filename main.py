@@ -304,7 +304,7 @@ reflection_chain = (
             reflection_prompt,
         ),
         MessagesPlaceholder(variable_name="history"),
-        ("human", "{input}"),
+        # ("human", "{input}"),
     ])
     | model_response)
 
@@ -378,7 +378,7 @@ question_chain = (ChatPromptTemplate.from_messages([
         question_prompt,
     ),
     MessagesPlaceholder(variable_name="history"),
-    ("human", "{input}"),
+    # ("human", "{input}"),
 ])
                   | model_response)
 
