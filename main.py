@@ -256,6 +256,7 @@ reflection_chain = (
             "system",
             reflection_prompt,
         ),
+        MessagesPlaceholder(variable_name="history"),
         ("human", "{input}"),
     ])
     | model_response)
