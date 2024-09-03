@@ -171,14 +171,51 @@ else:
 root_prompt = f"""
 ユーザの入力：{{input}}
 
-上記のユーザの入力が、「質問」か「それ以外」かを判断してください。質問だったら"question", それ以外だったら "other"と出力しください。
-明確な質問だけを質問と判断し、単に状況にいて述べているものは、質問とは判断しないで。出力は"question"か"other"のどちらかのみ出力し、それ以外の
-言葉は出力しないでください。
+あなたはRational Emotive Behavior Therapy（REBT）を専門とするAIアシスタントです。まず、上記のユーザの入力が回答を求める「質問」なのか、相談のフローを進めるための返答なのかを
+判断してください。回答を求める質問だったら"question"、それ以外だったら"other"と出力しください。ユーザの入力の文体にとらわれずに、対話履歴も加味して、相談のフローを継続すべきと
+思われる場合には、"other"として、相談のフローをいったん止めて質問に答えるべきと思われる場合には"question"と判断してください。
+出力は"question"か"other"のどちらかのみ出力し、それ以外の言葉は出力しないでください。
 """
 
-chain = (PromptTemplate.from_template(root_prompt)
-         | model_root
-         | StrOutputParser())
+# chain = (PromptTemplate.from_template(root_prompt)
+#          | model_root
+#          | StrOutputParser())
+
+chain = (
+    ChatPromptTemplate.from_messages([
+        (
+            "system",
+            root_prompt,
+        ),
+        MessagesPlaceholder(variable_name="history"),
+        ("human", "{input}"),
+    ])
+    | model_root)
+
+chain_memory = RunnableWithMessageHistory(
+    chain,
+    get_session_history,
+    input_messages_key="input",
+    history_messages_key="history",
+    history_factory_config=[
+        ConfigurableFieldSpec(
+            id="user_id",
+            annotation=str,
+            name="User ID",
+            description="Unique identifier for the user.",
+            default="",
+            is_shared=True,
+        ),
+        ConfigurableFieldSpec(
+            id="conversation_id",
+            annotation=str,
+            name="Conversation ID",
+            description="Unique identifier for the conversation.",
+            default="",
+            is_shared=True,
+        ),
+    ],
+)
 
 # 分岐先1：聞き返し
 reflection_prompt = f"""
@@ -387,7 +424,8 @@ def route(info):
 
 # RunnableLambdaを使った結合
 full_chain = {
-    "topic": chain,
+    # "topic": chain,
+    "topic": chain_memory,
     "input": lambda x: x["input"]
 } | RunnableLambda(route) | StrOutputParser()
 
