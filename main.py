@@ -544,32 +544,32 @@ def log_to_database(timestamp, sender, userId, stripeId, message, sys_prompt, is
         cursor.close()
         connection.close()
 
-# 会話履歴を参照する関数
-def get_conversation_history(userId):
-    connection = get_connection()
-    cursor = connection.cursor()
-    conversations = []
+# # 会話履歴を参照する関数
+# def get_conversation_history(userId):
+#     connection = get_connection()
+#     cursor = connection.cursor()
+#     conversations = []
 
-    try:
-        query = """
-        SELECT sender, message FROM line_bot_logs 
-        WHERE lineId=%s AND is_active=TRUE 
-        ORDER BY timestamp DESC LIMIT 10;
-        """
-        cursor.execute(query, (userId,))
+#     try:
+#         query = """
+#         SELECT sender, message FROM line_bot_logs 
+#         WHERE lineId=%s AND is_active=TRUE 
+#         ORDER BY timestamp DESC LIMIT 10;
+#         """
+#         cursor.execute(query, (userId,))
         
-        results = cursor.fetchall()
-        for result in results:
-            role = 'user' if result[0] == 'user' else 'assistant'
-            conversations.append({"role": role, "content": result[1]})
-    except Exception as e:
-        print(f"Error: {e}")
-    finally:
-        cursor.close()
-        connection.close()
+#         results = cursor.fetchall()
+#         for result in results:
+#             role = 'user' if result[0] == 'user' else 'assistant'
+#             conversations.append({"role": role, "content": result[1]})
+#     except Exception as e:
+#         print(f"Error: {e}")
+#     finally:
+#         cursor.close()
+#         connection.close()
 
-    # 最新の会話が最後に来るように反転
-    return conversations[::-1]
+#     # 最新の会話が最後に来るように反転
+#     return conversations[::-1]
 
 
 ## 旧 ##
