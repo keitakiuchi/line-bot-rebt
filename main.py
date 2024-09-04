@@ -152,7 +152,12 @@ def get_session_history(user_id: str,
 #             return chat_history
 
 # ルートモデル選択
-model_root = ChatGoogleGenerativeAI(temperature=0, model="gemini-1.5-flash")
+model_root = ChatGoogleGenerativeAI(
+    temperature=0,
+    model="gemini-1.5-flash",
+    top_p=0.95,
+    top_k=64,
+)
 # model_root = ChatOpenAI(temperature=0, model="gpt-4o-mini")
 
 # 応答モデル選択
