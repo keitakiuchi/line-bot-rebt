@@ -170,12 +170,10 @@ else:
     raise ValueError("Unknown model name")
 
 root_prompt = f"""
-ユーザの入力：{{input}}
-
-あなたはRational Emotive Behavior Therapy（REBT）を専門とするAIアシスタントです。まず、上記のユーザの入力が回答を求める「質問」なのか、相談のフローを進めるための返答なのかを
+あなたはRational Emotive Behavior Therapy（REBT）を専門とするAIアシスタントです。対話履歴から判断し、ユーザの最後の入力が回答を求める「質問」なのか、相談のフローを進めるための返答なのかを
 判断してください。回答を求める質問だったら"question"、それ以外だったら"other"と出力しください。ユーザの入力の文体にとらわれずに、対話履歴も加味して、相談のフローを継続すべきと
 思われる場合には、"other"として、相談のフローをいったん止めて質問に答えるべきと思われる場合には"question"と判断してください。
-出力は"question"か"other"のどちらかのみ出力し、それ以外の言葉は出力しないでください。
+出力は"question"か"other"のどちらかのみ出力し、それ以外の言葉は出力しないでください。必ず"question"か"other"のどちらかを出力してください。
 """
 
 # chain = (PromptTemplate.from_template(root_prompt)
@@ -189,7 +187,7 @@ chain = (
             root_prompt,
         ),
         MessagesPlaceholder(variable_name="history"),
-        ("human", "{input}"),
+        # ("human", "{input}"),
     ])
     | model_root
     | StrOutputParser())
