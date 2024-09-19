@@ -587,7 +587,8 @@ def handle_line_message(event):
             reply_text = "エラーが発生しました。"
 
         # メッセージをログに保存
-        log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text, current_prompt, model_name, True)
+        # log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text, current_prompt, model_name, True)
+        log_to_database(current_timestamp, 'system', userId, stripe_id, full_response, current_prompt, model_name, True)
 
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
