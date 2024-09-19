@@ -459,6 +459,7 @@ def generate_claude_response(prompt, userId):
         # # 履歴のデバッグログ
         # print("Debug: History before model invocation:", get_session_history(userId, userId).messages)
         response = full_chain.invoke(input, config)
+        logger.info(f"Response from GPT: {response}")
         return response
     except Exception as e:
         print(f"Error: {e}")
