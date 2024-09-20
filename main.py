@@ -118,8 +118,8 @@ def get_session_history(user_id: str,
         with conn.cursor() as cur:
             # cur.execute('SELECT sender, message FROM line_bot_logs WHERE Lineid = %s ORDER BY timestamp DESC, id DESC', 
             #             (conversation_id,))
-            # 直近10件のメッセージを取得するクエリに変更
-            cur.execute('SELECT sender, message FROM line_bot_logs WHERE Lineid = %s ORDER BY id DESC LIMIT 41', 
+            # 直近41件のメッセージを取得するクエリに変更
+            cur.execute('SELECT sender, message FROM line_bot_logs WHERE Lineid = %s AND is_active = TRUE ORDER BY id DESC LIMIT 41', 
                          (conversation_id,))
             rows = cur.fetchall()
 
