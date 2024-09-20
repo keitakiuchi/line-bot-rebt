@@ -579,7 +579,7 @@ def handle_line_message(event):
         return  # ここで処理を終了し、他の処理が実行されないようにする
 
     else:
-        # logger.info(f"Current reset_confirmation state: {reset_confirmation}")
+        logger.info(f"Current reset_confirmation state: {reset_confirmation}")
         # その他の通常メッセージ処理
         current_timestamp = datetime.datetime.now()
 
