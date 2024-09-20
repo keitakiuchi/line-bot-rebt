@@ -561,14 +561,14 @@ def handle_line_message(event):
 
     # ユーザーが「はい」を送信した場合、リセット確認フラグが有効なら履歴を削除
     elif event.message.text == "はい" and reset_confirmation.get(userId, False):
-        # logger.info(f"Confirmation 'はい' received for user: {userId}")
-        # logger.info(f"Current reset_confirmation state before processing 'はい': {reset_confirmation}")
+        logger.info(f"Confirmation 'はい' received for user: {userId}")
+        logger.info(f"Current reset_confirmation state before processing 'はい': {reset_confirmation}")
         deactivate_conversation_history(userId)
-        # logger.info(f"Conversation history reset for user: {userId}")
+        logger.info(f"Conversation history reset for user: {userId}")
         reply_text = "対話履歴を削除しました。"
         reset_confirmation[userId] = False  # フラグをリセット
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
-        # logger.info(f"Current reset_confirmation state: {reset_confirmation}")
+        logger.info(f"Current reset_confirmation state: {reset_confirmation}")
         return  # ここで処理を終了し、他の処理が実行されないようにする
 
     # 確認メッセージ後に「はい」以外の応答があった場合、削除を中止
@@ -579,7 +579,7 @@ def handle_line_message(event):
         return  # ここで処理を終了し、他の処理が実行されないようにする
 
     else:
-        logger.info(f"Current reset_confirmation state: {reset_confirmation}")
+        # logger.info(f"Current reset_confirmation state: {reset_confirmation}")
         # その他の通常メッセージ処理
         current_timestamp = datetime.datetime.now()
 
