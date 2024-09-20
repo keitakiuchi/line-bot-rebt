@@ -545,26 +545,32 @@ reset_confirmation = {}
 def handle_line_message(event):
     global current_prompt  # current_prompt を使用するためにグローバル変数として宣言
     userId = getattr(event.source, 'user_id', None)
-
+    
     # ユーザーが「リセット」を送信した場合
     if event.message.text == "リセット" and userId:
         # 確認メッセージを送信し、確認フラグを立てる
         reply_text = "過去の対話履歴を削除して良いですか？一度削除すると元には戻せません。よろしければ「はい」と入力してください。"
         reset_confirmation[userId] = True
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+        return  # ここで処理を終了し、他の処理が実行されないようにする
 
     # ユーザーが「はい」を送信した場合、リセット確認フラグが有効なら履歴を削除
     elif event.message.text == "はい" and reset_confirmation.get(userId, False):
         deactivate_conversation_history(userId)
         reply_text = "対話履歴を削除しました。"
         reset_confirmation[userId] = False  # フラグをリセット
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+        return  # ここで処理を終了し、他の処理が実行されないようにする
 
     # 確認メッセージ後に「はい」以外の応答があった場合、削除を中止
     elif reset_confirmation.get(userId, False):
         reply_text = "対話履歴の削除を中止しました。"
         reset_confirmation[userId] = False  # フラグをリセット
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+        return  # ここで処理を終了し、他の処理が実行されないようにする
 
     else:
-        # 現在のタイムスタンプを取得
+        # その他の通常メッセージ処理
         current_timestamp = datetime.datetime.now()
 
         if userId:
@@ -607,7 +613,9 @@ def handle_line_message(event):
         # メッセージをログに保存
         log_to_database(current_timestamp, 'system', userId, stripe_id, full_response, current_prompt, model_name, True)
 
-    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+        # 最終的な返信メッセージを送信
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+
 
 # @handler.add(MessageEvent, message=TextMessage)
 # def handle_line_message(event):
