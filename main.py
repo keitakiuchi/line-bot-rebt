@@ -460,7 +460,7 @@ def generate_claude_response(prompt, userId):
         # # 履歴のデバッグログ
         # print("Debug: History before model invocation:", get_session_history(userId, userId).messages)
         response = full_chain.invoke(input, config)
-        logger.info(f"Response from GPT: {response}")
+        # logger.info(f"Response from GPT: {response}")
         return response
     except Exception as e:
         print(f"Error: {e}")
@@ -548,6 +548,7 @@ def handle_line_message(event):
     
     # ユーザーが「リセット」を送信した場合
     if event.message.text == "リセット" and userId:
+        logger.info(f"Reset requested for user: {userId}")
         # 確認メッセージを送信し、確認フラグを立てる
         reply_text = "過去の対話履歴を削除して良いですか？一度削除すると元には戻せません。よろしければ「はい」と入力してください。"
         reset_confirmation[userId] = True
@@ -556,6 +557,7 @@ def handle_line_message(event):
 
     # ユーザーが「はい」を送信した場合、リセット確認フラグが有効なら履歴を削除
     elif event.message.text == "はい" and reset_confirmation.get(userId, False):
+        logger.info(f"Resetting conversation history for user: {userId}")
         deactivate_conversation_history(userId)
         reply_text = "対話履歴を削除しました。"
         reset_confirmation[userId] = False  # フラグをリセット
