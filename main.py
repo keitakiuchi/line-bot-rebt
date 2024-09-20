@@ -543,7 +543,7 @@ reset_confirmation = {}
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_line_message(event):
-    global current_prompt  # current_prompt を使用するためにグローバル変数として宣言
+    global current_prompt, reset_confirmation  # current_prompt を使用するためにグローバル変数として宣言
     userId = getattr(event.source, 'user_id', None)
     
     # ユーザーが「リセット」を送信した場合
