@@ -543,7 +543,7 @@ def handle_line_message(event):
     global current_prompt  # current_prompt を使用するためにグローバル変数として宣言
     userId = getattr(event.source, 'user_id', None)
     
-    if event.message.text == "スタート" and userId:
+    if event.message.text == "リセット" and userId:
         deactivate_conversation_history(userId)
         reply_text = "頼りにしてくださりありがとうございます。今日はどんなお話をうかがいましょうか？"
     else:
