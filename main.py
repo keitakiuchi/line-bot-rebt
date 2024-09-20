@@ -539,8 +539,20 @@ def deactivate_conversation_history(userId):
         connection.close()
 
 # LINEからのメッセージを処理し、必要に応じてStripeの情報も確認します。
-# ユーザーの状態を管理するための辞書
-user_states = {}
+import threading
+
+# スレッドローカルな状態管理
+thread_local = threading.local()
+
+def get_user_state(user_id):
+    if not hasattr(thread_local, 'user_states'):
+        thread_local.user_states = {}
+    return thread_local.user_states.get(user_id, 'normal')
+
+def set_user_state(user_id, state):
+    if not hasattr(thread_local, 'user_states'):
+        thread_local.user_states = {}
+    thread_local.user_states[user_id] = state
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_line_message(event):
@@ -548,57 +560,65 @@ def handle_line_message(event):
     userId = getattr(event.source, 'user_id', None)
     
     if not userId:
+        logger.error("User ID not found in the event.")
         reply_text = "エラーが発生しました。"
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
         return
 
-    # ユーザーの現在の状態を取得
-    current_state = user_states.get(userId, 'normal')
+    logger.info(f"Received message from user {userId}: {event.message.text}")
+    logger.info(f"Current user state: {get_user_state(userId)}")
 
-    # リセット処理の優先順位を高くする
-    if event.message.text == "リセット":
-        user_states[userId] = 'awaiting_reset_confirmation'
+    current_state = get_user_state(userId)
+
+    # ユーザーが「リセット」を送信した場合
+    if event.message.text == "リセット" and userId:
+        logger.info(f"Reset requested for user: {userId}")
+        set_user_state(userId, 'awaiting_reset_confirmation')
         reply_text = "過去の対話履歴を削除して良いですか？一度削除すると元には戻せません。よろしければ「はい」と入力してください。"
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+        logger.info(f"Current user state after reset request: {get_user_state(userId)}")
         return
 
-    if current_state == 'awaiting_reset_confirmation':
-        if event.message.text.lower() == "はい":
-            deactivate_conversation_history(userId)
-            reply_text = "対話履歴を削除しました。"
-        else:
-            reply_text = "対話履歴の削除を中止しました。"
-        user_states[userId] = 'normal'
+    # ユーザーが「はい」を送信した場合、リセット確認フラグが有効なら履歴を削除
+    elif event.message.text == "はい" and current_state == 'awaiting_reset_confirmation':
+        logger.info(f"Confirmation 'はい' received for user: {userId}")
+        logger.info(f"Current user state before processing 'はい': {get_user_state(userId)}")
+        deactivate_conversation_history(userId)
+        logger.info(f"Conversation history reset for user: {userId}")
+        reply_text = "対話履歴を削除しました。"
+        set_user_state(userId, 'normal')
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+        logger.info(f"Current user state after reset: {get_user_state(userId)}")
         return
 
-    # 通常の処理
-    current_timestamp = datetime.datetime.now()
+    # 確認メッセージ後に「はい」以外の応答があった場合、削除を中止
+    elif current_state == 'awaiting_reset_confirmation':
+        logger.info(f"Reset cancelled for user: {userId}")
+        reply_text = "対話履歴の削除を中止しました。"
+        set_user_state(userId, 'normal')
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+        logger.info(f"Current user state after reset cancellation: {get_user_state(userId)}")
+        return
 
-    if userId:
-        # LangSmithによる追跡
-        os.environ["LANGCHAIN_API_KEY"]
-        os.environ["LANGCHAIN_TRACING_V2"] = "true"
-        LANGCHAIN_ENDPOINT="https://api.smith.langchain.com"
-        os.environ["LANGCHAIN_PROJECT"] = f"lineREBT_{userId}"
-        
-        subscription_details = get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
-        stripe_id = subscription_details['stripeId'] if subscription_details else None
-        subscription_status = subscription_details['status'] if subscription_details else None
+    else:
+        logger.info(f"Processing normal message for user: {userId}")
+        # その他の通常メッセージ処理
+        current_timestamp = datetime.datetime.now()
 
-        log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, current_prompt, model_name, True)
+        if userId:
+            # LangSmithによる追跡
+            os.environ["LANGCHAIN_API_KEY"]
+            os.environ["LANGCHAIN_TRACING_V2"] = "true"
+            LANGCHAIN_ENDPOINT="https://api.smith.langchain.com"
+            os.environ["LANGCHAIN_PROJECT"] = f"lineREBT_{userId}"
+            
+            subscription_details = get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
+            stripe_id = subscription_details['stripeId'] if subscription_details else None
+            subscription_status = subscription_details['status'] if subscription_details else None
 
-        if subscription_status == None: ####################本番は"active", テストはNone################
-            full_response = generate_claude_response(event.message.text, userId)
-            # <response>タグの中身を抽出
-            match = re.search(r'<response>(.*?)</response>', full_response, re.DOTALL)
-            if match:
-                reply_text = match.group(1)
-            else:
-                reply_text = full_response
-        else:
-            response_count = get_system_responses_in_last_24_hours(userId)
-            if response_count < 5: 
+            log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, current_prompt, model_name, True)
+
+            if subscription_status == None: ####################本番は"active", テストはNone################
                 full_response = generate_claude_response(event.message.text, userId)
                 # <response>タグの中身を抽出
                 match = re.search(r'<response>(.*?)</response>', full_response, re.DOTALL)
@@ -607,17 +627,47 @@ def handle_line_message(event):
                 else:
                     reply_text = full_response
             else:
-                line_login_url = os.environ["LINE_LOGIN_URL"]
-                reply_text = f"利用回数の上限に達しました。24時間後に再度お試しください。こちらから回数無制限の有料プランに申し込むこともできます：{line_login_url}"
+                response_count = get_system_responses_in_last_24_hours(userId)
+                if response_count < 5: 
+                    full_response = generate_claude_response(event.message.text, userId)
+                    # <response>タグの中身を抽出
+                    match = re.search(r'<response>(.*?)</response>', full_response, re.DOTALL)
+                    if match:
+                        reply_text = match.group(1)
+                    else:
+                        reply_text = full_response
+                else:
+                    line_login_url = os.environ["LINE_LOGIN_URL"]
+                    reply_text = f"利用回数の上限に達しました。24時間後に再度お試しください。こちらから回数無制限の有料プランに申し込むこともできます：{line_login_url}"
+        else:
+            reply_text = "エラーが発生しました。"
 
         # メッセージをログに保存
         log_to_database(current_timestamp, 'system', userId, stripe_id, full_response, current_prompt, model_name, True)
 
-    else:
-        reply_text = "エラーが発生しました。"
+        # 最終的な返信メッセージを送信
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
-    # 最終的な返信メッセージを送信
-    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+    logger.info(f"Replied to user {userId}: {reply_text}")
+
+def deactivate_conversation_history(userId):
+    logger.info(f"Attempting to deactivate conversation history for user: {userId}")
+    connection = get_connection()
+    cursor = connection.cursor()
+    try:
+        query = """
+        UPDATE line_bot_logs SET is_active=FALSE 
+        WHERE lineId=%s;
+        """
+        cursor.execute(query, (userId,))
+        connection.commit()
+        logger.info(f"Successfully deactivated conversation history for user: {userId}")
+    except Exception as e:
+        logger.error(f"Error deactivating conversation history for user {userId}: {e}")
+        connection.rollback()
+    finally:
+        cursor.close()
+        connection.close()
 
 
 # # ユーザーごとの確認フラグを保持する辞書を追加
