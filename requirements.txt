@@ -13,3 +13,4 @@ langchain_openai
 langchain_anthropic
 fastapi
 langchain-google-genai
+redis==4.5.5
