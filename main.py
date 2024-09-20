@@ -538,14 +538,31 @@ def deactivate_conversation_history(userId):
         connection.close()
 
 # LINEからのメッセージを処理し、必要に応じてStripeの情報も確認します。
+# ユーザーごとの確認フラグを保持する辞書を追加
+reset_confirmation = {}
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_line_message(event):
     global current_prompt  # current_prompt を使用するためにグローバル変数として宣言
     userId = getattr(event.source, 'user_id', None)
-    
+
+    # ユーザーが「リセット」を送信した場合
     if event.message.text == "リセット" and userId:
+        # 確認メッセージを送信し、確認フラグを立てる
+        reply_text = "過去の対話履歴を削除して良いですか？一度削除すると元には戻せません。よろしければ「はい」と入力してください。"
+        reset_confirmation[userId] = True
+
+    # ユーザーが「はい」を送信した場合、リセット確認フラグが有効なら履歴を削除
+    elif event.message.text == "はい" and reset_confirmation.get(userId, False):
         deactivate_conversation_history(userId)
-        reply_text = "頼りにしてくださりありがとうございます。今日はどんなお話をうかがいましょうか？"
+        reply_text = "対話履歴を削除しました。"
+        reset_confirmation[userId] = False  # フラグをリセット
+
+    # 確認メッセージ後に「はい」以外の応答があった場合、削除を中止
+    elif reset_confirmation.get(userId, False):
+        reply_text = "対話履歴の削除を中止しました。"
+        reset_confirmation[userId] = False  # フラグをリセット
+
     else:
         # 現在のタイムスタンプを取得
         current_timestamp = datetime.datetime.now()
@@ -588,7 +605,6 @@ def handle_line_message(event):
             reply_text = "エラーが発生しました。"
 
         # メッセージをログに保存
-        # log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text, current_prompt, model_name, True)
         log_to_database(current_timestamp, 'system', userId, stripe_id, full_response, current_prompt, model_name, True)
 
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
@@ -598,7 +614,7 @@ def handle_line_message(event):
 #     global current_prompt  # current_prompt を使用するためにグローバル変数として宣言
 #     userId = getattr(event.source, 'user_id', None)
     
-#     if event.message.text == "スタート" and userId:
+#     if event.message.text == "リセット" and userId:
 #         deactivate_conversation_history(userId)
 #         reply_text = "頼りにしてくださりありがとうございます。今日はどんなお話をうかがいましょうか？"
 #     else:
@@ -619,11 +635,23 @@ def handle_line_message(event):
 #             log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, current_prompt, model_name, True)
 
 #             if subscription_status == None: ####################本番は"active", テストはNone################
-#                 reply_text = generate_claude_response(event.message.text, userId)
+#                 full_response = generate_claude_response(event.message.text, userId)
+#                 # <response>タグの中身を抽出
+#                 match = re.search(r'<response>(.*?)</response>', full_response, re.DOTALL)
+#                 if match:
+#                     reply_text = match.group(1)
+#                 else:
+#                     reply_text = full_response
 #             else:
 #                 response_count = get_system_responses_in_last_24_hours(userId)
 #                 if response_count < 5: 
-#                     reply_text = generate_claude_response(event.message.text, userId)
+#                     full_response = generate_claude_response(event.message.text, userId)
+#                     # <response>タグの中身を抽出
+#                     match = re.search(r'<response>(.*?)</response>', full_response, re.DOTALL)
+#                     if match:
+#                         reply_text = match.group(1)
+#                     else:
+#                         reply_text = full_response
 #                 else:
 #                     line_login_url = os.environ["LINE_LOGIN_URL"]
 #                     reply_text = f"利用回数の上限に達しました。24時間後に再度お試しください。こちらから回数無制限の有料プランに申し込むこともできます：{line_login_url}"
@@ -631,7 +659,8 @@ def handle_line_message(event):
 #             reply_text = "エラーが発生しました。"
 
 #         # メッセージをログに保存
-#         log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text, current_prompt, model_name, True)
+#         # log_to_database(current_timestamp, 'system', userId, stripe_id, reply_text, current_prompt, model_name, True)
+#         log_to_database(current_timestamp, 'system', userId, stripe_id, full_response, current_prompt, model_name, True)
 
 #     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
