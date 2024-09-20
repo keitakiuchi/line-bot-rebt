@@ -561,6 +561,8 @@ def handle_line_message(event):
 
     # ユーザーが「はい」を送信した場合、リセット確認フラグが有効なら履歴を削除
     elif event.message.text == "はい" and reset_confirmation.get(userId, False):
+        logger.info(f"Confirmation 'はい' received for user: {userId}")
+        logger.info(f"Current reset_confirmation state before processing 'はい': {reset_confirmation}")
         logger.info(f"Resetting conversation history for user: {userId}")
         deactivate_conversation_history(userId)
         logger.info(f"Conversation history reset for user: {userId}")
