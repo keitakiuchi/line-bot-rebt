@@ -2,7 +2,8 @@ from flask import Flask, request, abort
 import os
 import re
 from uuid import uuid4
-import datetime
+from datetime import datetime, timedelta
+import redis
 from linebot import (
     LineBotApi, WebhookHandler
 )
@@ -544,32 +545,23 @@ reset_confirmation = {}
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_line_message(event):
-    global current_prompt, reset_confirmation  # current_prompt を使用するためにグローバル変数として宣言
+    global current_prompt  # current_prompt を使用するためにグローバル変数として宣言
     userId = getattr(event.source, 'user_id', None)
-    
-    # logger.info(f"Current reset_confirmation state: {reset_confirmation}")
     
     # ユーザーが「リセット」を送信した場合
     if event.message.text == "リセット" and userId:
-        # logger.info(f"Reset requested for user: {userId}")
         # 確認メッセージを送信し、確認フラグを立てる
         reply_text = "過去の対話履歴を削除して良いですか？一度削除すると元には戻せません。よろしければ「はい」と入力してください。"
         reset_confirmation[userId] = True
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
-        # logger.info(f"Current reset_confirmation state: {reset_confirmation}")
         return  # ここで処理を終了し、他の処理が実行されないようにする
 
     # ユーザーが「はい」を送信した場合、リセット確認フラグが有効なら履歴を削除
-    # loogerをコメントアウトすると、リセットが上手く機能しない。Herokuの環境では、各リクエストが異なるワーカープロセスで処理される可能性があり、メモリ内の状態が共有されないからっぽい。
     elif event.message.text == "はい" and reset_confirmation.get(userId, False):
-        logger.info(f"Confirmation 'はい' received for user: {userId}")
-        logger.info(f"Current reset_confirmation state before processing 'はい': {reset_confirmation}")
         deactivate_conversation_history(userId)
-        logger.info(f"Conversation history reset for user: {userId}")
         reply_text = "対話履歴を削除しました。"
         reset_confirmation[userId] = False  # フラグをリセット
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
-        logger.info(f"Current reset_confirmation state: {reset_confirmation}")
         return  # ここで処理を終了し、他の処理が実行されないようにする
 
     # 確認メッセージ後に「はい」以外の応答があった場合、削除を中止
@@ -580,7 +572,6 @@ def handle_line_message(event):
         return  # ここで処理を終了し、他の処理が実行されないようにする
 
     else:
-        # logger.info(f"Current reset_confirmation state: {reset_confirmation}")
         # その他の通常メッセージ処理
         current_timestamp = datetime.datetime.now()
 
@@ -626,6 +617,96 @@ def handle_line_message(event):
 
         # 最終的な返信メッセージを送信
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+
+
+# # LINEからのメッセージを処理し、必要に応じてStripeの情報も確認します。
+# # ユーザーごとの確認フラグを保持する辞書を追加
+# reset_confirmation = {}
+
+# @handler.add(MessageEvent, message=TextMessage)
+# def handle_line_message(event):
+#     global current_prompt, reset_confirmation  # current_prompt を使用するためにグローバル変数として宣言
+#     userId = getattr(event.source, 'user_id', None)
+    
+#     # logger.info(f"Current reset_confirmation state: {reset_confirmation}")
+    
+#     # ユーザーが「リセット」を送信した場合
+#     if event.message.text == "リセット" and userId:
+#         # logger.info(f"Reset requested for user: {userId}")
+#         # 確認メッセージを送信し、確認フラグを立てる
+#         reply_text = "過去の対話履歴を削除して良いですか？一度削除すると元には戻せません。よろしければ「はい」と入力してください。"
+#         reset_confirmation[userId] = True
+#         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+#         # logger.info(f"Current reset_confirmation state: {reset_confirmation}")
+#         return  # ここで処理を終了し、他の処理が実行されないようにする
+
+#     # ユーザーが「はい」を送信した場合、リセット確認フラグが有効なら履歴を削除
+#     # loogerをコメントアウトすると、リセットが上手く機能しない。Herokuの環境では、各リクエストが異なるワーカープロセスで処理される可能性があり、メモリ内の状態が共有されないからっぽい。
+#     elif event.message.text == "はい" and reset_confirmation.get(userId, False):
+#         logger.info(f"Confirmation 'はい' received for user: {userId}")
+#         logger.info(f"Current reset_confirmation state before processing 'はい': {reset_confirmation}")
+#         deactivate_conversation_history(userId)
+#         logger.info(f"Conversation history reset for user: {userId}")
+#         reply_text = "対話履歴を削除しました。"
+#         reset_confirmation[userId] = False  # フラグをリセット
+#         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+#         logger.info(f"Current reset_confirmation state: {reset_confirmation}")
+#         return  # ここで処理を終了し、他の処理が実行されないようにする
+
+#     # 確認メッセージ後に「はい」以外の応答があった場合、削除を中止
+#     elif reset_confirmation.get(userId, False):
+#         reply_text = "対話履歴の削除を中止しました。"
+#         reset_confirmation[userId] = False  # フラグをリセット
+#         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+#         return  # ここで処理を終了し、他の処理が実行されないようにする
+
+#     else:
+#         # logger.info(f"Current reset_confirmation state: {reset_confirmation}")
+#         # その他の通常メッセージ処理
+#         current_timestamp = datetime.datetime.now()
+
+#         if userId:
+#             # LangSmithによる追跡
+#             os.environ["LANGCHAIN_API_KEY"]
+#             os.environ["LANGCHAIN_TRACING_V2"] = "true"
+#             LANGCHAIN_ENDPOINT="https://api.smith.langchain.com"
+#             os.environ["LANGCHAIN_PROJECT"] = f"lineREBT_{userId}"
+            
+#             subscription_details = get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
+#             stripe_id = subscription_details['stripeId'] if subscription_details else None
+#             subscription_status = subscription_details['status'] if subscription_details else None
+
+#             log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, current_prompt, model_name, True)
+
+#             if subscription_status == None: ####################本番は"active", テストはNone################
+#                 full_response = generate_claude_response(event.message.text, userId)
+#                 # <response>タグの中身を抽出
+#                 match = re.search(r'<response>(.*?)</response>', full_response, re.DOTALL)
+#                 if match:
+#                     reply_text = match.group(1)
+#                 else:
+#                     reply_text = full_response
+#             else:
+#                 response_count = get_system_responses_in_last_24_hours(userId)
+#                 if response_count < 5: 
+#                     full_response = generate_claude_response(event.message.text, userId)
+#                     # <response>タグの中身を抽出
+#                     match = re.search(r'<response>(.*?)</response>', full_response, re.DOTALL)
+#                     if match:
+#                         reply_text = match.group(1)
+#                     else:
+#                         reply_text = full_response
+#                 else:
+#                     line_login_url = os.environ["LINE_LOGIN_URL"]
+#                     reply_text = f"利用回数の上限に達しました。24時間後に再度お試しください。こちらから回数無制限の有料プランに申し込むこともできます：{line_login_url}"
+#         else:
+#             reply_text = "エラーが発生しました。"
+
+#         # メッセージをログに保存
+#         log_to_database(current_timestamp, 'system', userId, stripe_id, full_response, current_prompt, model_name, True)
+
+#         # 最終的な返信メッセージを送信
+#         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
 # stripeの情報を参照
 def get_subscription_details_for_user(userId, STRIPE_PRICE_ID):
