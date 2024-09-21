@@ -36,7 +36,7 @@ app = Flask(__name__)
 
 import redis
 # Redis クライアントの初期化
-redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
+redis_url = os.getenv('REDIS_URL')
 redis_client = redis.from_url(redis_url)
 
 # 環境変数取得
