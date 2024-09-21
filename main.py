@@ -573,7 +573,7 @@ def handle_line_message(event):
 
     else:
         # その他の通常メッセージ処理
-        current_timestamp = datetime.datetime.now()
+        current_timestamp = datetime.now()
 
         if userId:
             # LangSmithによる追跡
@@ -663,7 +663,7 @@ def handle_line_message(event):
 #     else:
 #         # logger.info(f"Current reset_confirmation state: {reset_confirmation}")
 #         # その他の通常メッセージ処理
-#         current_timestamp = datetime.datetime.now()
+#         current_timestamp = datetime.now()
 
 #         if userId:
 #             # LangSmithによる追跡
