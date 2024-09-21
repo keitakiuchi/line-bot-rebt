@@ -3,7 +3,6 @@ import os
 import re
 from uuid import uuid4
 from datetime import datetime, timedelta
-import redis
 from linebot import (
     LineBotApi, WebhookHandler
 )
@@ -34,6 +33,11 @@ from langchain.schema.runnable.utils import ConfigurableFieldSpec
 from langchain_community.chat_message_histories import ChatMessageHistory
 
 app = Flask(__name__)
+
+import redis
+# Redis クライアントの初期化
+redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
+redis_client = redis.from_url(redis_url)
 
 # 環境変数取得
 YOUR_CHANNEL_ACCESS_TOKEN = os.environ["YOUR_CHANNEL_ACCESS_TOKEN"]
