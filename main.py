@@ -38,10 +38,10 @@ import redis
 from urllib.parse import urlparse
 # Redis クライアントの初期化
 # REDIS_TLS_URL を優先的に使用し、なければ REDIS_URL を使用
+# Redis クライアントの初期化（グローバルスコープ）
 redis_url = os.environ.get("REDIS_TLS_URL") or os.environ.get("REDIS_URL")
-
 url = urlparse(redis_url)
-r = redis.Redis(
+redis_client = redis.Redis(
     host=url.hostname,
     port=url.port,
     password=url.password,
@@ -51,13 +51,10 @@ r = redis.Redis(
 
 # 接続テスト
 try:
-    r.ping()
-    print("Successfully connected to Redis")
+    redis_client.ping()
+    logger.info("Successfully connected to Redis")
 except redis.ConnectionError as e:
-    print(f"Failed to connect to Redis: {e}")
-
-except redis.ConnectionError:
-    logger.error("Failed to connect to Redis")
+    logger.error(f"Failed to connect to Redis: {e}")
     raise
 except Exception as e:
     logger.error(f"Failed to initialize Redis client: {str(e)}")
