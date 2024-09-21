@@ -532,6 +532,7 @@ def deactivate_conversation_history(userId):
         """
         cursor.execute(query, (userId,))
         connection.commit()
+        set_user_state(userId, 'normal')  # ユーザーの状態をリセット
     except Exception as e:
         print(f"Error: {e}")
         connection.rollback()
@@ -540,55 +541,71 @@ def deactivate_conversation_history(userId):
         connection.close()
 
 # LINEからのメッセージを処理し、必要に応じてStripeの情報も確認します。
-# ユーザーごとの確認フラグを保持する辞書を追加
-reset_confirmation = {}
+def get_user_state(user_id):
+    state = redis_client.get(f"user_state:{user_id}")
+    return state.decode('utf-8') if state else 'normal'
+
+def set_user_state(user_id, state):
+    redis_client.set(f"user_state:{user_id}", state)
+    redis_client.expire(f"user_state:{user_id}", 1800)  # 30分後に期限切れ
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_line_message(event):
-    global current_prompt  # current_prompt を使用するためにグローバル変数として宣言
+    global current_prompt
     userId = getattr(event.source, 'user_id', None)
     
+    if not userId:
+        reply_text = "エラーが発生しました。"
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+        return
+
+    current_state = get_user_state(userId)
+
     # ユーザーが「リセット」を送信した場合
-    if event.message.text == "リセット" and userId:
-        # 確認メッセージを送信し、確認フラグを立てる
+    if event.message.text == "リセット":
+        set_user_state(userId, 'awaiting_reset_confirmation')
         reply_text = "過去の対話履歴を削除して良いですか？一度削除すると元には戻せません。よろしければ「はい」と入力してください。"
-        reset_confirmation[userId] = True
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
-        return  # ここで処理を終了し、他の処理が実行されないようにする
+        return
 
-    # ユーザーが「はい」を送信した場合、リセット確認フラグが有効なら履歴を削除
-    elif event.message.text == "はい" and reset_confirmation.get(userId, False):
-        deactivate_conversation_history(userId)
-        reply_text = "対話履歴を削除しました。"
-        reset_confirmation[userId] = False  # フラグをリセット
+    # ユーザーが「はい」を送信した場合、リセット確認状態なら履歴を削除
+    elif current_state == 'awaiting_reset_confirmation':
+        if event.message.text.lower() == "はい":
+            deactivate_conversation_history(userId)
+            reply_text = "対話履歴を削除しました。"
+        else:
+            reply_text = "対話履歴の削除を中止しました。"
+        set_user_state(userId, 'normal')
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
-        return  # ここで処理を終了し、他の処理が実行されないようにする
+        return
 
-    # 確認メッセージ後に「はい」以外の応答があった場合、削除を中止
-    elif reset_confirmation.get(userId, False):
-        reply_text = "対話履歴の削除を中止しました。"
-        reset_confirmation[userId] = False  # フラグをリセット
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
-        return  # ここで処理を終了し、他の処理が実行されないようにする
+    # 通常のメッセージ処理
+    current_timestamp = datetime.now()
 
-    else:
-        # その他の通常メッセージ処理
-        current_timestamp = datetime.now()
+    if userId:
+        # LangSmithによる追跡
+        os.environ["LANGCHAIN_API_KEY"]
+        os.environ["LANGCHAIN_TRACING_V2"] = "true"
+        LANGCHAIN_ENDPOINT="https://api.smith.langchain.com"
+        os.environ["LANGCHAIN_PROJECT"] = f"lineREBT_{userId}"
+        
+        subscription_details = get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
+        stripe_id = subscription_details['stripeId'] if subscription_details else None
+        subscription_status = subscription_details['status'] if subscription_details else None
 
-        if userId:
-            # LangSmithによる追跡
-            os.environ["LANGCHAIN_API_KEY"]
-            os.environ["LANGCHAIN_TRACING_V2"] = "true"
-            LANGCHAIN_ENDPOINT="https://api.smith.langchain.com"
-            os.environ["LANGCHAIN_PROJECT"] = f"lineREBT_{userId}"
-            
-            subscription_details = get_subscription_details_for_user(userId, STRIPE_PRICE_ID)
-            stripe_id = subscription_details['stripeId'] if subscription_details else None
-            subscription_status = subscription_details['status'] if subscription_details else None
+        log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, current_prompt, model_name, True)
 
-            log_to_database(current_timestamp, 'user', userId, stripe_id, event.message.text, current_prompt, model_name, True)
-
-            if subscription_status == None: ####################本番は"active", テストはNone################
+        if subscription_status == None: ####################本番は"active", テストはNone################
+            full_response = generate_claude_response(event.message.text, userId)
+            # <response>タグの中身を抽出
+            match = re.search(r'<response>(.*?)</response>', full_response, re.DOTALL)
+            if match:
+                reply_text = match.group(1)
+            else:
+                reply_text = full_response
+        else:
+            response_count = get_system_responses_in_last_24_hours(userId)
+            if response_count < 5: 
                 full_response = generate_claude_response(event.message.text, userId)
                 # <response>タグの中身を抽出
                 match = re.search(r'<response>(.*?)</response>', full_response, re.DOTALL)
@@ -597,26 +614,16 @@ def handle_line_message(event):
                 else:
                     reply_text = full_response
             else:
-                response_count = get_system_responses_in_last_24_hours(userId)
-                if response_count < 5: 
-                    full_response = generate_claude_response(event.message.text, userId)
-                    # <response>タグの中身を抽出
-                    match = re.search(r'<response>(.*?)</response>', full_response, re.DOTALL)
-                    if match:
-                        reply_text = match.group(1)
-                    else:
-                        reply_text = full_response
-                else:
-                    line_login_url = os.environ["LINE_LOGIN_URL"]
-                    reply_text = f"利用回数の上限に達しました。24時間後に再度お試しください。こちらから回数無制限の有料プランに申し込むこともできます：{line_login_url}"
-        else:
-            reply_text = "エラーが発生しました。"
+                line_login_url = os.environ["LINE_LOGIN_URL"]
+                reply_text = f"利用回数の上限に達しました。24時間後に再度お試しください。こちらから回数無制限の有料プランに申し込むこともできます：{line_login_url}"
+    else:
+        reply_text = "エラーが発生しました。"
 
-        # メッセージをログに保存
-        log_to_database(current_timestamp, 'system', userId, stripe_id, full_response, current_prompt, model_name, True)
+    # メッセージをログに保存
+    log_to_database(current_timestamp, 'system', userId, stripe_id, full_response, current_prompt, model_name, True)
 
-        # 最終的な返信メッセージを送信
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+    # 最終的な返信メッセージを送信
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
 
 # # LINEからのメッセージを処理し、必要に応じてStripeの情報も確認します。
