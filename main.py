@@ -36,20 +36,25 @@ app = Flask(__name__)
 
 import redis
 # Redis クライアントの初期化
-redis_url = os.getenv('REDIS_URL')
+redis_url = os.getenv('REDIS_TLS_URL') or os.getenv('REDIS_TEMPORARY_URL')
+
 if not redis_url:
-    logger.error("REDIS_URL environment variable is not set")
-    raise ValueError("REDIS_URL environment variable is not set")
+    logger.error("Neither REDIS_TLS_URL nor REDIS_TEMPORARY_URL environment variable is set")
+    raise ValueError("Redis URL environment variable is not set")
 
-logger.info(f"Redis URL: {redis_url[:8]}...") # URLの先頭部分のみをログに出力
-
-if not redis_url.startswith(('redis://', 'rediss://')):
-    logger.error(f"Invalid Redis URL scheme: {redis_url[:8]}...")
-    raise ValueError("Invalid Redis URL scheme. Must start with redis:// or rediss://")
+logger.info(f"Using Redis URL: {redis_url[:8]}...") # URLの先頭部分のみをログに出力
 
 try:
     redis_client = redis.from_url(redis_url)
     logger.info("Redis client initialized successfully")
+
+    # Redis接続のテスト
+    redis_client.ping()
+    logger.info("Successfully connected to Redis")
+
+except redis.ConnectionError:
+    logger.error("Failed to connect to Redis")
+    raise
 except Exception as e:
     logger.error(f"Failed to initialize Redis client: {str(e)}")
     raise
