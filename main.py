@@ -35,22 +35,26 @@ from langchain_community.chat_message_histories import ChatMessageHistory
 app = Flask(__name__)
 
 import redis
+from urllib.parse import urlparse
 # Redis クライアントの初期化
-redis_url = os.getenv('REDIS_TLS_URL') or os.getenv('REDIS_TEMPORARY_URL')
+# REDIS_TLS_URL を優先的に使用し、なければ REDIS_URL を使用
+redis_url = os.environ.get("REDIS_TLS_URL") or os.environ.get("REDIS_URL")
 
-if not redis_url:
-    logger.error("Neither REDIS_TLS_URL nor REDIS_TEMPORARY_URL environment variable is set")
-    raise ValueError("Redis URL environment variable is not set")
+url = urlparse(redis_url)
+r = redis.Redis(
+    host=url.hostname,
+    port=url.port,
+    password=url.password,
+    ssl=(url.scheme == "rediss"),
+    ssl_cert_reqs=None
+)
 
-logger.info(f"Using Redis URL: {redis_url[:8]}...") # URLの先頭部分のみをログに出力
-
+# 接続テスト
 try:
-    redis_client = redis.from_url(redis_url)
-    logger.info("Redis client initialized successfully")
-
-    # Redis接続のテスト
-    redis_client.ping()
-    logger.info("Successfully connected to Redis")
+    r.ping()
+    print("Successfully connected to Redis")
+except redis.ConnectionError as e:
+    print(f"Failed to connect to Redis: {e}")
 
 except redis.ConnectionError:
     logger.error("Failed to connect to Redis")
